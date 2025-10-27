@@ -1,8 +1,5 @@
 from pybit.unified_trading import HTTP
 import telebot
-from aiogram.types import ReplyKeyboardRemove, \
-    ReplyKeyboardMarkup, KeyboardButton, \
-    InlineKeyboardMarkup, InlineKeyboardButton
 import time
 from datetime import datetime
 
@@ -71,6 +68,9 @@ proshlie={}
 
 
 while(True):
+
+    print('ByBit running...')
+
     dostupi={}
     file=open('dostup.txt', encoding='utf-8')
     for i in file:
@@ -112,7 +112,7 @@ while(True):
     for sym in all_coins[:]:
         time_now=int(str(time.time()).split('.')[0]+'000')
         time_prev=time_now-(60*150*1000)
-        print(sym)
+        # print(sym)
         try:
             slovar[sym]=[]
             session = HTTP(
@@ -127,7 +127,7 @@ while(True):
                 start=time_prev,
                 end=time_now,
             )
-            print(prom)
+            # print(prom)
             
             
             for user in dostupi:
@@ -136,7 +136,7 @@ while(True):
                         spis[user]={'long':['3','5'],'short':['7','20'],'dump':['7','20']}
                     for regim in spis[user]:
                         razn=((float(prom['result']['list'][0][2])-float(prom['result']['list'][int(spis[user][regim][1])-1][3]))/float(prom['result']['list'][int(spis[user][regim][1])-1][3]))*100
-                        print(regim,razn)
+                        # print(regim,razn)
                         if(regim=='long' and prover_dubli(proshlie,user,sym,regim,int(spis[user][regim][1]),prom['result']['list'])):
                             if(razn>float(spis[user][regim][0])):
                                 tekkkk=datetime.now().strftime("%Y-%m-%d")

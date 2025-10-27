@@ -1,0 +1,3 @@
+pyTelegramBotApi
+binance-futures-connector
+pybit
