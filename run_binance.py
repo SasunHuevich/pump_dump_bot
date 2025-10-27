@@ -1,12 +1,14 @@
 from pybit.unified_trading import HTTP
 import telebot
 import time
+import os
 from datetime import datetime
 from binance.um_futures import UMFutures
+from dotenv import load_dotenv
 
-bot = telebot.TeleBot('', threaded=False)
+load_dotenv()
 
-
+bot = telebot.TeleBot(os.getenv("BOT_TOKEN"), threaded=False)
 
 signals={}
 file=open('signals.txt', encoding='utf-8')
@@ -75,7 +77,7 @@ while(True):
     print('BINANCE running...')
 
     cm_futures_client = UMFutures()
-    cm_futures_client = UMFutures(key='', secret='')
+    cm_futures_client = UMFutures(key=os.getenv("BINANCE_API_KEY"), secret=os.getenv("BINANCE_API_SECRET"))
     dostupi={}
     file=open('dostup.txt', encoding='utf-8')
     for i in file:

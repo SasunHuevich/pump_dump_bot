@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 import telebot
 import time
+import os
 from telebot.types import ReplyKeyboardRemove, \
     ReplyKeyboardMarkup, KeyboardButton, \
     InlineKeyboardMarkup, InlineKeyboardButton
 from datetime import datetime
+from dotenv import load_dotenv
 
+load_dotenv()
 
-bot = telebot.TeleBot('', threaded=False)   
+bot = telebot.TeleBot(os.getenv("BOT_TOKEN"), threaded=False)   
 
 
 @bot.message_handler(commands=['start'])

@@ -1,9 +1,13 @@
 from pybit.unified_trading import HTTP
 import telebot
 import time
+import os
 from datetime import datetime
+from dotenv import load_dotenv
 
-bot = telebot.TeleBot('', threaded=False)
+load_dotenv()
+
+bot = telebot.TeleBot(os.getenv("BOT_TOKEN"), threaded=False)
 
 signals={}
 file=open('signals.txt', encoding='utf-8')
@@ -117,8 +121,8 @@ while(True):
             slovar[sym]=[]
             session = HTTP(
                 testnet=False,
-                api_key="",
-                api_secret="",
+                api_key=os.getenv("BYBIT_API_KEY"),
+                api_secret=os.getenv("BYBIT_API_SECRET"),
             )
             prom=session.get_kline(
                 category="linear",
