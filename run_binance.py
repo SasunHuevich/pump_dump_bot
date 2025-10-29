@@ -1,217 +1,184 @@
 from pybit.unified_trading import HTTP
 import telebot
 import time
-import os
 from datetime import datetime
 from binance.um_futures import UMFutures
-from dotenv import load_dotenv
+from db import DatabaseManager
+import logging
 
-load_dotenv()
+# Настройка логирования
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-bot = telebot.TeleBot(os.getenv("BOT_TOKEN"), threaded=False)
+bot = telebot.TeleBot('6653096426:AAFS69aAx7gG8JPew5HtjSIPdqUSsQB6bi4', threaded=False)
 
-signals={}
-file=open('signals.txt', encoding='utf-8')
-for i in file:
-    pup=i.strip().split(';')
-    if(pup[0] not in signals):
-        signals[pup[0]]={}
-    if(pup[1] not in signals[pup[0]]):
-        signals[pup[0]][pup[1]]={}
-    if(pup[2] not in signals[pup[0]][pup[1]]):
-        signals[pup[0]][pup[1]][pup[2]]={'bybit':0,'binance':0}
-    signals[pup[0]][pup[1]][pup[2]][pup[3]]=signals[pup[0]][pup[1]][pup[2]][pup[3]]+1
-file.close()
+# Создаем экземпляр базы данных
+db = DatabaseManager()
 
-all_coins=[]
-file=open('resss_bin.txt', encoding='utf-8')
-for i in file:
-    all_coins.append(i.strip())
-file.close()
+# Загружаем отслеживаемые монеты из базы данных
+all_coins = db.get_tracked_coins('binance')
 
-def have_dostup(id,dostup):
-    date_time = datetime.now().strftime("%Y-%m-%d")
-    flag=0
-    if(id in dostup):
-        if(dostup[id]>date_time):
-            flag=1
-    if(flag==1):
-        return True
-    else:
-        return False
+def have_dostup(user_id):
+    """Проверяет, есть ли у пользователя активный доступ"""
+    return db.check_user_access(user_id)
     
-def bybit_vkl(id,vklu):
-    flag=0
-    if(id in vklu):
-        if(vklu[id]['binance']=='+'):
-            flag=1
-    else:
-        flag=1
-    if(flag==1):
-        return True
-    else:
-        return False
+def binance_vkl(user_id):
+    """Проверяет, включена ли биржа Binance для пользователя"""
+    exchanges = db.get_user_exchanges(user_id)
+    return exchanges.get('binance', '+') == '+'
 
-def prover_dubli(proshlie,user,sym,regim,vremya,prom):
-    bili=[]
-    flag=1
+def prover_dubli(proshlie, user, sym, regim, vremya, prom):
+    """Проверяет, был ли уже сигнал для данного пользователя/символа/режима."""
     try:
-        for i in prom[:vremya]:
-            bili.append(i[0])
-        if(proshlie[user][regim][sym] in bili):
-            flag=0
-        else:
-            flag=1
-    except:
-        flag=1
-    if(flag==1):
+        recent = [i[0] for i in prom[:vremya]]
+        last_time = proshlie.get(user, {}).get(regim, {}).get(sym)
+        return last_time not in recent
+    except Exception:
         return True
-    else:
-        return False
+
     
 proshlie={}
 
 
-while(True):
-
-    print('BINANCE running...')
-
-    cm_futures_client = UMFutures()
-    cm_futures_client = UMFutures(key=os.getenv("BINANCE_API_KEY"), secret=os.getenv("BINANCE_API_SECRET"))
-    dostupi={}
-    file=open('dostup.txt', encoding='utf-8')
-    for i in file:
-        pup=i.strip().split(';')
+def process_symbol_binance(sym, dostupi, proshlie, cm_futures_client):
+    """Обрабатывает один символ для всех пользователей через Binance API"""
+    try:
+        prom = cm_futures_client.klines(sym, "1m")
+        prom.reverse()
         
-        if(pup[2]=='+'):
-            dostupi[pup[0]]=pup[1]
+        if not prom or len(prom) < 2:
+            logger.warning(f"Binance: Нет данных для символа {sym}")
+            return
+        
+        for user_id in dostupi:
+            if not have_dostup(user_id) or not binance_vkl(user_id):
+                continue
+                
+            try:
+                settings = db.get_user_settings(user_id)
+                
+                for regim in settings:
+                    try:
+                        period_minutes = int(float(settings[regim][1]))
+                        if period_minutes > len(prom):
+                            logger.warning(f"Binance: Недостаточно данных для периода {period_minutes} мин для {sym}")
+                            continue
+                            
+                        current_price = float(prom[0][2])  # Цена закрытия текущей свечи
+                        past_price = float(prom[period_minutes - 1][3])  # Цена открытия прошлой свечи
+                        
+                        if past_price == 0:
+                            logger.warning(f"Binance: Нулевая цена для {sym}")
+                            continue
+                            
+                        razn = ((current_price - past_price) / past_price) * 100
+                        
+                        # Проверяем условия для каждого типа сигнала
+                        signal_sent = False
+                        
+                        condition = \
+                            (regim == 'long' and razn > float(settings[regim][0])) or \
+                            (regim == 'short' and razn > float(settings[regim][0])) or \
+                            (regim == 'dump' and razn < -float(settings[regim][0]))
+                        if condition:
+                            if prover_dubli(proshlie, user_id, sym, regim, period_minutes, prom):
+                                signal_sent = send_signal_binance(user_id, sym, regim, razn, settings[regim][1], 
+                                                               past_price, current_price, 'binance', proshlie, prom[0][0])
+                        
+                        if signal_sent:
+                            time.sleep(0.1)  # Небольшая пауза между сообщениями
+                            
+                    except ValueError as e:
+                        logger.error(f"Binance: Ошибка обработки данных для {sym}, пользователь {user_id}, режим {regim}: {e}")
+                        continue
+                    except IndexError as e:
+                        logger.error(f"Binance: Ошибка индекса для {sym}, пользователь {user_id}, режим {regim}: {e}")
+                        continue
+                        
+            except Exception as e:
+                logger.error(f"Binance: Ошибка получения настроек для пользователя {user_id}: {e}")
+                continue
+                
+    except Exception as e:
+        error_str = str(e)
+        if "Invalid symbol status" in error_str or "-1122" in error_str:
+            logger.warning(f"Binance: Символ {sym} неактивен или удален с биржи")
+            # Можно добавить автоматическую деактивацию символа
+            # db.query("UPDATE tracked_coins SET is_active = FALSE WHERE symbol = %s AND exchange_name = 'binance'", (sym,))
         else:
-            del dostupi[pup[0]]
-    file.close()
+            logger.error(f"Binance: Ошибка API для символа {sym}: {e}")
+        return
 
-
-    vkl={}
-    file=open('vkl.txt', encoding='utf-8')
-    for i in file:
-        pup=i.strip().split(';')
-        if(pup[0] not in vkl):
-            vkl[pup[0]]={'bybit':'+','binance':'+'}
-        vkl[pup[0]][pup[1]]=pup[2]
-    file.close()
-
-
-    spis={}
-    file=open('nastroiki.txt', encoding='utf-8')
-    for i in file:
-        pup=i.strip().split(';')
-        if(pup[0] not in spis):
-            spis[pup[0]]={'long':['3','5'],'short':['7','20'],'dump':['7','20']}
+def send_signal_binance(user_id, sym, regim, razn, period, past_price, current_price, exchange, proshlie, timestamp):
+    """Отправляет сигнал пользователю"""
+    try:
+        tekkkk = datetime.now().strftime("%Y-%m-%d")
+        signals_count = db.get_signals_count(user_id, tekkkk, sym, exchange)
         
-        if(pup[1]=='procent'):
-            spis[pup[0]][pup[2]][0]=pup[3]
-        else:
-            spis[pup[0]][pup[2]][1]=pup[3]
-    file.close()
-
-    slovar={}
-
-
-    for sym in all_coins[:]:
-        time_now=int(str(time.time()).split('.')[0]+'000')
-        time_prev=time_now-(60*150*1000)
-        # print(sym)
-        try:
-            slovar[sym]=[]
-            
-            prom=cm_futures_client.klines(sym, "1m")
-            prom.reverse()
-            # print(prom)
-            #input('fvfvdf')
-            #print(prom)
-            
-            
-            for user in dostupi:
-                if(have_dostup(user,dostupi) and bybit_vkl(user,vkl)):
-                    if(user not in spis):
-                        spis[user]={'long':['3','5'],'short':['7','20'],'dump':['7','20']}
-                    for regim in spis[user]:
-                        razn=((float(prom[0][2])-float(prom[int(spis[user][regim][1])-1][3]))/float(prom[int(spis[user][regim][1])-1][3]))*100
-                        # print(regim,razn)
-                        if(regim=='long' and prover_dubli(proshlie,user,sym,regim,int(spis[user][regim][1]),prom)):
-                            if(razn>float(spis[user][regim][0])):
-                                tekkkk=datetime.now().strftime("%Y-%m-%d")
-                                if(user not in signals):
-                                    signals[user]={}
-                                if(tekkkk not in signals[user]):
-                                    signals[user][tekkkk]={}
-                                if(sym not in signals[user][tekkkk]):
-                                    signals[user][tekkkk][sym]={'bybit':0,'binance':0}
-                                signals[user][tekkkk][sym]['binance']=signals[user][tekkkk][sym]['binance']+1
-                                mess='🏦BINANCE • '+spis[user][regim][1]+'м • '+sym+'\n📈Рост: '+ str(round(razn,2))+'% ('+prom[int(spis[user][regim][1])-1][3]+'-'+prom[0][2]+')\n🔔Сигнал за сутки: '+str(signals[user][tekkkk][sym]['binance'])
-                                file=open('signals.txt','a', encoding='utf-8')
-                                file.write(user+';'+datetime.now().strftime("%Y-%m-%d")+';'+sym+';'+'binance;'+str(prom[0][0])+'\n')
-                                file.close()
-                                if(user not in proshlie):
-                                    proshlie[user]={'long':{},'short':{},'dump':{}}
-                                proshlie[user]['long'][sym]=prom[0][0]
-                                    
-                                try:
-                                    bot.send_message(int(user), mess)
-                                    time.sleep(0.1)
-                                except:
-                                    print('ERRORRR')
-                                    #input('scsdcsdcdCdscs')
-                        elif(regim=='short' and prover_dubli(proshlie,user,sym,regim,int(spis[user][regim][1]),prom)):
-                            if(razn>float(spis[user][regim][0])):
-                                tekkkk=datetime.now().strftime("%Y-%m-%d")
-                                if(user not in signals):
-                                    signals[user]={}
-                                if(tekkkk not in signals[user]):
-                                    signals[user][tekkkk]={}
-                                if(sym not in signals[user][tekkkk]):
-                                    signals[user][tekkkk][sym]={'bybit':0,'binance':0}
-                                signals[user][tekkkk][sym]['binance']=signals[user][tekkkk][sym]['binance']+1
-                                mess='🏦BINANCE • '+spis[user][regim][1]+'м • '+sym+'\n🔺Памп: '+ str(round(razn,2))+'% ('+prom[int(spis[user][regim][1])-1][3]+'-'+prom[0][2]+')\n🔔Сигнал за сутки: '+str(signals[user][tekkkk][sym]['binance'])
-                                file=open('signals.txt','a', encoding='utf-8')
-                                file.write(user+';'+datetime.now().strftime("%Y-%m-%d")+';'+sym+';'+'binance;'+str(prom[0][0])+'\n')
-                                file.close()
-                                if(user not in proshlie):
-                                    proshlie[user]={'long':{},'short':{},'dump':{}}
-                                proshlie[user]['short'][sym]=prom[0][0]
-                                try:
-                                    bot.send_message(int(user), mess)
-                                    time.sleep(0.1)
-                                except:
-                                    print('ERRORRR')
-                                    #input('scsdcsdcdCdscs')
-                        elif(regim=='dump' and prover_dubli(proshlie,user,sym,regim,int(spis[user][regim][1]),prom)):
-                            if(razn<-float(spis[user][regim][0])):
-                                tekkkk=datetime.now().strftime("%Y-%m-%d")
-                                if(user not in signals):
-                                    signals[user]={}
-                                if(tekkkk not in signals[user]):
-                                    signals[user][tekkkk]={}
-                                if(sym not in signals[user][tekkkk]):
-                                    signals[user][tekkkk][sym]={'bybit':0,'binance':0}
-                                signals[user][tekkkk][sym]['binance']=signals[user][tekkkk][sym]['binance']+1
-                                mess='🏦BINANCE • '+spis[user][regim][1]+'м • '+sym+'\n🔻Падение: '+ str(round(razn,2))+'% ('+prom[int(spis[user][regim][1])-1][3]+'-'+prom[0][2]+')\n🔔Сигнал за сутки: '+str(signals[user][tekkkk][sym]['binance'])
-                                file=open('signals.txt','a', encoding='utf-8')
-                                file.write(user+';'+datetime.now().strftime("%Y-%m-%d")+';'+sym+';'+'binance;'+str(prom[0][0])+'\n')
-                                file.close()
-                                if(user not in proshlie):
-                                    proshlie[user]={'long':{},'short':{},'dump':{}}
-                                proshlie[user]['dump'][sym]=prom[0][0]
-                                try:
-                                    bot.send_message(int(user), mess)
-                                    time.sleep(0.1)
-                                except:
-                                    print('ERRORRR')
-                                    #input('scsdcsdcdCdscs')
+        # Определяем тип сигнала и эмодзи
+        if regim == 'long':
+            signal_type = "📈Рост"
+        elif regim == 'short':
+            signal_type = "🔺Памп"
+        else:  # dump
+            signal_type = "🔻Падение"
         
-        except:
-            print('Miniii')
-            file=open('error.txt','a', encoding='utf-8')
-            file.write(sym+';binance'+str(time.time())+'\n')
-            file.close()
-             
+        mess = f'🏦{exchange.upper()} • {period}м • {sym}\n{signal_type}: {round(razn, 2)}% ({past_price}-{current_price})\n🔔Сигнал за сутки: {signals_count + 1}'
         
+        # Добавляем сигнал в базу данных
+        db.add_signal(user_id, tekkkk, sym, exchange, regim, timestamp)
+        
+        # Обновляем историю сигналов
+        if user_id not in proshlie:
+            proshlie[user_id] = {'long': {}, 'short': {}, 'dump': {}}
+        proshlie[user_id][regim][sym] = timestamp
+        
+        # Отправляем сообщение
+        bot.send_message(int(user_id), mess)
+        logger.info(f"Binance: Отправлен сигнал {regim} для {sym} пользователю {user_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Binance: Ошибка отправки сигнала для {sym} пользователю {user_id}: {e}")
+        return False
+
+while True:
+    try:
+        logger.info('Binance: Запуск сканирования...')
+        
+        # Инициализируем клиент Binance
+        cm_futures_client = UMFutures()
+        cm_futures_client = UMFutures(
+            key='WxKoobMCG9Af1ylkcSgf70SBGBzB42yjo5oqfzre81ArrLO1ZKu3eVk2fD6wTm4X', 
+            secret='GD12Qzfbih0n1vaZmem1IAtCUsLgaS9hpGxZDWuRxd0NxjSt9ANItJQTdZoVCVbl'
+        )
+        
+        # Получаем всех пользователей с активным доступом
+        dostupi = db.get_all_active_users()
+        
+        if not dostupi:
+            logger.info("Binance: Нет активных пользователей")
+            time.sleep(60)  # Ждем минуту если нет пользователей
+            continue
+        
+        logger.info(f"Binance: Обрабатываем {len(all_coins)} символов для {len(dostupi)} пользователей")
+        
+        for sym in all_coins:
+            process_symbol_binance(sym, dostupi, proshlie, cm_futures_client)
+            
+        logger.info('Binance: Сканирование завершено')
+        time.sleep(60)  # Пауза между циклами
+        
+    except KeyboardInterrupt:
+        logger.info("Binance: Получен сигнал остановки")
+        break
+    except Exception as e:
+        logger.error(f"Binance: Критическая ошибка в основном цикле: {e}")
+        time.sleep(60)  # Пауза перед повторной попыткой
+
+# Закрываем соединение с базой данных только при завершении программы
+try:
+    db.close()
+    logger.info("Binance: Соединение с базой данных закрыто")
+except:
+    pass

@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
+import os
 import telebot
 import time
-import os
-from telebot.types import ReplyKeyboardRemove, \
-    ReplyKeyboardMarkup, KeyboardButton, \
-    InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 from datetime import datetime
+from db import DatabaseManager
 from dotenv import load_dotenv
 
 load_dotenv()
 
 bot = telebot.TeleBot(os.getenv("BOT_TOKEN"), threaded=False)   
 
+db = DatabaseManager()   
 
 @bot.message_handler(commands=['start'])
 def start_command(message):
@@ -23,7 +23,6 @@ def get_command(message):
     messs='Выберите действие: '
     msg = bot.send_message(message.chat.id, messs,reply_markup=add_menu())
     
-
 def add_menu():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = KeyboardButton("Добавить пользователя")
@@ -78,22 +77,15 @@ def izmen_menu():
     return markup
     
 def birgi(message):
-    spis={}
-    spis[str(message.chat.id)]={'bybit':'+','binance':'+'}
-    file=open('vkl.txt', encoding='utf-8')
-    for i in file:
-        if(i.strip()!=''):
-            pup=i.strip().split(';')
-            if(pup[0] not in spis):
-                spis[pup[0]]={'bybit':'+','binance':'+'}
-            spis[pup[0]][pup[1]]=pup[2]
-    file.close()
+    """Показывает настройки бирж для пользователя"""
+    exchanges = db.get_user_exchanges(message.chat.id)
+    
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    if(spis[str(message.chat.id)]['binance']=='+'):
+    if(exchanges['binance']=='+'):
         btn1 = KeyboardButton("✅ Выключить Binance")
     else:
         btn1 = KeyboardButton("⬜️ Включить Binance")
-    if(spis[str(message.chat.id)]['bybit']=='+'):
+    if(exchanges['bybit']=='+'):
         btn2 = KeyboardButton("✅ Выключить ByBit")
     else:
         btn2 = KeyboardButton("⬜️ Включить ByBit")
@@ -103,53 +95,31 @@ def birgi(message):
     msg = bot.send_message(message.chat.id, messs,reply_markup=markup)
     
 def nastroiki(message):
-    spis={}
-    spis[str(message.chat.id)]={'long':['3','5'],'short':['7','20'],'dump':['7','20']}
-    file=open('nastroiki.txt', encoding='utf-8')
-    for i in file:
-        pup=i.strip().split(';')
-        if(pup[0]==str(message.chat.id)):
-            if(pup[1]=='procent'):
-                spis[str(message.chat.id)][pup[2]][0]=pup[3]
-            else:
-                spis[str(message.chat.id)][pup[2]][1]=pup[3]
-    file.close()
-    #messs='🤖 Я сканирую рынок на маленькие пампы, чтобы искать точки входа в ЛОНГ 🟢, большие пампы, чтобы искать точки входа в ШОРТ 🔴 и резкие просадки, чтобы торговать отскок 🔻 \n\nПримеры настроек: \n\n🟢 "Прислать лонговый сигнал, если монета выросла на 3% за 3 минуты"\n\n🔴  "Прислать шортовый сигнал, если монета выросла на 30% за 10 минут"\n\n🔻"Прислать сигнал о дампе, если монета упала на 10% за 15 минут"'
-    #msg = bot.send_message(message.chat.id, messs)
-    messs='✅Текущие настройки:\n\n📈 Лонг: '+spis[str(message.chat.id)]['long'][0]+'% за '+spis[str(message.chat.id)]['long'][1]+' мин.\n🔺 Шорт: '+spis[str(message.chat.id)]['short'][0]+'% за '+spis[str(message.chat.id)]['short'][1]+' мин.\n🔻 Падение: -'+spis[str(message.chat.id)]['dump'][0]+'% за '+spis[str(message.chat.id)]['dump'][1]+' мин.'
+    """Показывает текущие настройки пользователя"""
+    settings = db.get_user_settings(message.chat.id)
+    
+    messs='✅Текущие настройки:\n\n📈 Лонг: '+settings['long'][0]+'% за '+settings['long'][1]+' мин.\n🔺 Шорт: '+settings['short'][0]+'% за '+settings['short'][1]+' мин.\n🔻 Падение: -'+settings['dump'][0]+'% за '+settings['dump'][1]+' мин.'
     msg = bot.send_message(message.chat.id, messs,reply_markup=nastroyki_menu())
 
-
-
 def profil(message):
-    #print(message)
-    date_time = datetime.now().strftime("%Y-%m-%d")
-    flag=0
-    data=''
-    file=open('dostup.txt', encoding='utf-8')
-    for i in file:
-        pup=i.strip().split(';')
-        if(pup[0]==str(message.chat.id)):
-            if(pup[2]=='+'):
-                if(pup[1]>date_time):
-                    flag=1
-                    data=pup[1]
-            else:
-                flag=0
-    file.close()   
-
-    if(flag==1):                 
-        messs='Профиль пользователя '+str(message.chat.id)+'\nПодписка действительна до '+data+'\nПо вопросам продления обратитесь к @lexcrypto1'
+    """Показывает профиль пользователя"""
+    access = db.get_user_access(message.chat.id)
+    
+    if access and db.check_user_access(message.chat.id):
+        messs=f'Профиль пользователя {message.chat.id}\nПодписка действительна до {access["subscription_end_date"]}\nПо вопросам продления обратитесь к @lexcrypto1'
     else:
-        messs='Профиль пользователя '+str(message.chat.id)+'\n🚨 Доступ к моим функциям закрыт.\nПо вопросам продления обратитесь к @lexcrypto1'
+        messs=f'Профиль пользователя {message.chat.id}\n🚨 Доступ к моим функциям закрыт.\nПо вопросам продления обратитесь к @lexcrypto1'
     
     msg = bot.send_message(message.chat.id, messs,reply_markup=profil_menu())
-
 
 def dostup(message):
     messs='Для поддержки обратитесь в чат @lexcrypto1'
     msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
 
+def submit_cancel_add_menu(message):
+    bot.clear_step_handler_by_chat_id(message.chat.id)
+    messs='❌ Ввод отменен'
+    msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
 
 def send_id_add(message):
     try:
@@ -160,338 +130,164 @@ def send_id_add(message):
             msg = bot.send_message(message.chat.id, messs,reply_markup=nazad_menu())
             bot.register_next_step_handler(msg, send_data_add,str(znach))
         else:
-            bot.clear_step_handler_by_chat_id(message.chat.id)
-            messs='❌ Ввод отменен'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=add_menu())
-    except:
-        messs='Ошибка'
+            submit_cancel_add_menu(message)
+    except Exception:
+        messs='Ошибка ввода. Укажите целое число ID.'
         msg = bot.send_message(message.chat.id, messs,reply_markup=add_menu())
     
-
 def send_data_add(message,data):
     try:
         if(message.text.strip()!='<< Назад'):
             znach=message.text.strip()
-            file=open('dostup.txt','a', encoding='utf-8')
-            file.write(str(data)+';'+znach+';+\n')
-            file.close()
-            messs='Пользователь '+str(znach)+' добавлен до '+znach+'.'
+            db.add_user_access(int(data), znach, True)
+            messs=f'Пользователь {data} добавлен до {znach}.'
             msg = bot.send_message(message.chat.id, messs,reply_markup=add_menu())
             
         else:
-            bot.clear_step_handler_by_chat_id(message.chat.id)
-            messs='❌ Ввод отменен'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=add_menu())
-    except:
-        messs='Ошибка'
+            submit_cancel_add_menu(message)
+    except Exception:
+        messs='Ошибка при сохранении данных.'
         msg = bot.send_message(message.chat.id, messs,reply_markup=add_menu())
 
 def send_id_del(message):
     try:
         if(message.text.strip()!='<< Назад'):
             znach=int(message.text.strip())
-            file=open('dostup.txt','a', encoding='utf-8')
-            file.write(str(znach)+';;-\n')
-            file.close()
-            messs='Пользователь '+str(znach)+' удалён.'
+            db.revoke_user_access(znach)
+            messs=f'Пользователь {znach} удалён.'
             msg = bot.send_message(message.chat.id, messs,reply_markup=add_menu())
         else:
-            bot.clear_step_handler_by_chat_id(message.chat.id)
-            messs='❌ Ввод отменен'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=add_menu())
-    except:
-        messs='Ошибка'
+            submit_cancel_add_menu(message)
+    except Exception:
+        messs='Ошибка ввода. Укажите целое число ID.'
         msg = bot.send_message(message.chat.id, messs,reply_markup=add_menu())
 
-def period_long(message):
+def _handle_int_setting(message, kind, field, success_template):
     try:
         if(message.text.strip()!='✖️ Отмена'):
-            znach=int(message.text.strip())
-            file=open('nastroiki.txt','a', encoding='utf-8')
-            file.write(str(message.chat.id)+';time;long;'+str(znach)+'\n')
-            file.close()
-            messs='✔️ Период времени сохранён '+str(znach)+' мин.'
+            value = int(message.text.strip())
+            db.update_user_setting(message.chat.id, kind, field, value)
+            messs = success_template.format(value=value)
             msg = bot.send_message(message.chat.id, messs,reply_markup=nastroyki_menu())
         else:
-            bot.clear_step_handler_by_chat_id(message.chat.id)
-            messs='❌ Ввод отменен'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    except:
-        messs='Ошибка'
+            submit_cancel_add_menu(message)
+    except Exception:
+        messs='Ошибка ввода. Укажите целое число.'
         msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
 
-def period_short(message):
+def _handle_float_setting(message, kind, field, success_template):
     try:
         if(message.text.strip()!='✖️ Отмена'):
-            znach=int(message.text.strip())
-            file=open('nastroiki.txt','a', encoding='utf-8')
-            file.write(str(message.chat.id)+';time;short;'+str(znach)+'\n')
-            file.close()
-            messs='✔️ Период времени сохранён '+str(znach)+' мин.'
+            value = float(message.text.strip().replace(',','.'))
+            db.update_user_setting(message.chat.id, kind, field, value)
+            messs = success_template.format(value=value)
             msg = bot.send_message(message.chat.id, messs,reply_markup=nastroyki_menu())
         else:
             bot.clear_step_handler_by_chat_id(message.chat.id)
             messs='❌ Ввод отменен'
             msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    except:
-        messs='Ошибка'
+    except Exception:
+        messs='Ошибка ввода. Укажите число (например, 1.5).'
         msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
 
-def period_dump(message):
-    try:
-        if(message.text.strip()!='✖️ Отмена'):
-            znach=int(message.text.strip())
-            file=open('nastroiki.txt','a', encoding='utf-8')
-            file.write(str(message.chat.id)+';time;dump;'+str(znach)+'\n')
-            file.close()
-            messs='✔️ Период времени сохранён '+str(znach)+' мин.'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=nastroyki_menu())
-        else:
-            bot.clear_step_handler_by_chat_id(message.chat.id)
-            messs='❌ Ввод отменен'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    except:
-        messs='Ошибка'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
+def period_time(message, kind):
+    _handle_int_setting(
+        message,
+        kind=kind,
+        field='time',
+        success_template='✔️ Период времени сохранён {value} мин.'
+    )
 
-def procent_long(message):
-    try:
-        if(message.text.strip()!='✖️ Отмена'):
-            znach=float(message.text.strip().replace(',','.'))
-            file=open('nastroiki.txt','a', encoding='utf-8')
-            file.write(str(message.chat.id)+';procent;long;'+str(znach)+'\n')
-            file.close()
-            messs='✔️ Процент изменения цены сохранён '+str(znach)+' %.'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=nastroyki_menu())
-        else:
-            bot.clear_step_handler_by_chat_id(message.chat.id)
-            messs='❌ Ввод отменен'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    except:
-        messs='Ошибка'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    
-def procent_short(message):
-    try:
-        if(message.text.strip()!='✖️ Отмена'):
-            znach=float(message.text.strip().replace(',','.'))
-            file=open('nastroiki.txt','a', encoding='utf-8')
-            file.write(str(message.chat.id)+';procent;short;'+str(znach)+'\n')
-            file.close()
-            messs='✔️ Процент изменения цены сохранён '+str(znach)+' %.'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=nastroyki_menu())
-        else:
-            bot.clear_step_handler_by_chat_id(message.chat.id)
-            messs='❌ Ввод отменен'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    except:
-        messs='Ошибка'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-
-def procent_dump(message):
-    try:
-        if(message.text.strip()!='✖️ Отмена'):
-            znach=float(message.text.strip().replace(',','.'))
-            file=open('nastroiki.txt','a', encoding='utf-8')
-            file.write(str(message.chat.id)+';procent;dump;'+str(znach)+'\n')
-            file.close()
-            messs='✔️ Процент изменения цены сохранён '+str(znach)+' %.'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=nastroyki_menu())
-        else:
-            bot.clear_step_handler_by_chat_id(message.chat.id)
-            messs='❌ Ввод отменен'
-            msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    except:
-        messs='Ошибка'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-
+def procent_value(message, kind):
+    _handle_float_setting(
+        message,
+        kind=kind,
+        field='procent',
+        success_template='✔️ Процент изменения цены сохранён {value} %.'
+    )
 
 @bot.message_handler(content_types=['text'])
 def func(message):
-    if(message.text == "🏦 Выбор биржи"):
-        birgi(message)
+    def _send(chat_id, text, markup=None):
+        if markup is None:
+            markup = main_menu()
+        return bot.send_message(chat_id, text, reply_markup=markup)
 
-    if(message.text == "✅ Выключить Binance"):
-        file=open('vkl.txt','a', encoding='utf-8')
-        file.write(str(message.chat.id)+';binance;-\n')
-        file.close()
-        messs='Сигналы с биржи Binance выключены'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    if(message.text == "⬜️ Включить Binance"):
-        file=open('vkl.txt','a', encoding='utf-8')
-        file.write(str(message.chat.id)+';binance;+\n')
-        file.close()
-        messs='Сигналы с биржи Binance включены'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    if(message.text == "✅ Выключить ByBit"):
-        file=open('vkl.txt','a', encoding='utf-8')
-        file.write(str(message.chat.id)+';bybit;-\n')
-        file.close()
-        messs='Сигналы с биржи ByBit выключены'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    if(message.text == "⬜️ Включить ByBit"):
-        file=open('vkl.txt','a', encoding='utf-8')
-        file.write(str(message.chat.id)+';bybit;+\n')
-        file.close()
-        messs='Сигналы с биржи ByBit включены'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    if(message.text == "✖️ Назад"):
-        messs='❌ Ввод отменен'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
-    if(message.text == "✖️ Отмена"):
-        bot.clear_step_handler_by_chat_id(message.chat.id)
-        messs='❌ Ввод отменен'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=main_menu())
+    def _toggle_handler(exchange_key, display_name, enabled):
+        def _inner(msg):
+            db.update_user_exchange(msg.chat.id, exchange_key, enabled)
+            status = 'включены' if enabled else 'выключены'
+            bot.send_message(msg.chat.id, f'Сигналы с биржи {display_name} {status}')
+            birgi(msg)
+        return _inner
 
-    if(message.text == "⚒️ Настроить"):
-        nastroiki(message)
-    if(message.text == "💬 Поддержка"):
-        dostup(message)
-    if(message.text == "🔐 Получить доступ"):
-        profil(message)
-    if(message.text == "💌 Суппорт"):
-        messs='🤖 Есть вопросы по моей работе? Отпиши @lexcrypto1'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=profil_menu())
-    
-    if(message.text == "📈 Период лонг"):
-        spis={}
-        spis[str(message.chat.id)]={'long':['3','5'],'short':['7','20'],'dump':['7','20']}
-        file=open('nastroiki.txt', encoding='utf-8')
-        for i in file:
-            pup=i.strip().split(';')
-            if(pup[0]==str(message.chat.id)):
-                if(pup[1]=='procent'):
-                    spis[str(message.chat.id)][pup[2]][0]=pup[3]
-                else:
-                    spis[str(message.chat.id)][pup[2]][1]=pup[3]
-        file.close()
-        messs='🕑 Текущий период времени, за который должен произойти рост – '+spis[str(message.chat.id)]['long'][1]+' мин\n\nВведи новый период времени: от 1 до 30 минут'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=izmen_menu())
-        bot.register_next_step_handler(msg, period_long)
+    def _prompt_period(kind, human_label, next_handler):
+        def _inner(msg):
+            settings = db.get_user_settings(msg.chat.id)
+            current = settings[kind][1]
+            text = f'🕑 Текущий период времени, за который должен(о) произойти {human_label} – {current} мин\n\nВведи новый период времени: от 1 до 30 минут'
+            m = _send(msg.chat.id, text, izmen_menu())
+            bot.register_next_step_handler(m, next_handler, kind)
+        return _inner
 
-    if(message.text == "🔺 Период памп"):
-        spis={}
-        spis[str(message.chat.id)]={'long':['3','5'],'short':['7','20'],'dump':['7','20']}
-        file=open('nastroiki.txt', encoding='utf-8')
-        for i in file:
-            pup=i.strip().split(';')
-            if(pup[0]==str(message.chat.id)):
-                if(pup[1]=='procent'):
-                    spis[str(message.chat.id)][pup[2]][0]=pup[3]
-                else:
-                    spis[str(message.chat.id)][pup[2]][1]=pup[3]
-        file.close()
-        messs='🕑 Текущий период времени, за который должен произойти памп – '+spis[str(message.chat.id)]['short'][1]+' мин\n\nВведи новый период времени: от 1 до 30 минут'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=izmen_menu())
-        bot.register_next_step_handler(msg, period_short)
-    if(message.text == "🔻 Период падение"):
-        spis={}
-        spis[str(message.chat.id)]={'long':['3','5'],'short':['7','20'],'dump':['7','20']}
-        file=open('nastroiki.txt', encoding='utf-8')
-        for i in file:
-            pup=i.strip().split(';')
-            if(pup[0]==str(message.chat.id)):
-                if(pup[1]=='procent'):
-                    spis[str(message.chat.id)][pup[2]][0]=pup[3]
-                else:
-                    spis[str(message.chat.id)][pup[2]][1]=pup[3]
-        file.close()
-        messs='🕑 Текущий период времени, за который должно произойти падение – '+spis[str(message.chat.id)]['dump'][1]+' мин\n\nВведи новый период времени: от 1 до 30 минут'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=izmen_menu())
-        bot.register_next_step_handler(msg, period_dump)
+    def _prompt_percent(kind, human_label, next_handler):
+        def _inner(msg):
+            settings = db.get_user_settings(msg.chat.id)
+            current = round(float(settings[kind][0]), 1)
+            text = f'{human_label} {current}%\n\nВведи новый % изменения цены: от 0.5% до 100%'
+            m = _send(msg.chat.id, text, izmen_menu())
+            bot.register_next_step_handler(m, next_handler, kind)
+        return _inner
 
-    if(message.text == "% роста"):
-        spis={}
-        spis[str(message.chat.id)]={'long':['3','5'],'short':['7','20'],'dump':['7','20']}
-        file=open('nastroiki.txt', encoding='utf-8')
-        for i in file:
-            pup=i.strip().split(';')
-            if(pup[0]==str(message.chat.id)):
-                if(pup[1]=='procent'):
-                    spis[str(message.chat.id)][pup[2]][0]=pup[3]
-                else:
-                    spis[str(message.chat.id)][pup[2]][1]=pup[3]
-        file.close()
-        messs='📈Текущий % изменения цены роста – '+str(round(float(spis[str(message.chat.id)]['long'][0]),1))+'%\n\nВведи новый % изменения цены: от 0.5% до 100%'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=izmen_menu())
-        bot.register_next_step_handler(msg, procent_long)
+    def _add_user_flow(msg):
+        m = _send(msg.chat.id, 'Введите ID пользователя для добавления: ', nazad_menu())
+        bot.register_next_step_handler(m, send_id_add)
 
-    if(message.text == "% пампа"):
-        spis={}
-        spis[str(message.chat.id)]={'long':['3','5'],'short':['7','20'],'dump':['7','20']}
-        file=open('nastroiki.txt', encoding='utf-8')
-        for i in file:
-            pup=i.strip().split(';')
-            if(pup[0]==str(message.chat.id)):
-                if(pup[1]=='procent'):
-                    spis[str(message.chat.id)][pup[2]][0]=pup[3]
-                else:
-                    spis[str(message.chat.id)][pup[2]][1]=pup[3]
-        file.close()
-        messs='🔺Текущий % изменения цены пампа –'+str(round(float(spis[str(message.chat.id)]['short'][0]),1))+'%\n\nВведи новый % изменения цены: от 0.5% до 100%'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=izmen_menu())
-        bot.register_next_step_handler(msg, procent_short)
+    def _delete_user_flow(msg):
+        dostupi = db.get_all_active_users()
+        if(dostupi):
+            messs = ''
+            for user_id, end_date in dostupi.items():
+                messs += f'<code>{user_id}</code>  {end_date}\n'
+            bot.send_message(msg.chat.id, messs.strip(), parse_mode="HTML")
+            m = _send(msg.chat.id, 'Введите ID пользователя для удаления: ', nazad_menu())
+            bot.register_next_step_handler(m, send_id_del)
+        else:
+            bot.send_message(msg.chat.id, 'Нет активных пользователей', reply_markup=add_menu())
 
-    if(message.text == "% падения"):
-        spis={}
-        spis[str(message.chat.id)]={'long':['3','5'],'short':['7','20'],'dump':['7','20']}
-        file=open('nastroiki.txt', encoding='utf-8')
-        for i in file:
-            pup=i.strip().split(';')
-            if(pup[0]==str(message.chat.id)):
-                if(pup[1]=='procent'):
-                    spis[str(message.chat.id)][pup[2]][0]=pup[3]
-                else:
-                    spis[str(message.chat.id)][pup[2]][1]=pup[3]
-        file.close()
-        messs='🔻 Текущий % изменения цены падения – '+str(round(float(spis[str(message.chat.id)]['dump'][0]),1))+'%\n\nВведи новый % изменения цены: от 0.5% до 100%'
-        msg = bot.send_message(message.chat.id, messs,reply_markup=izmen_menu())
-        bot.register_next_step_handler(msg, procent_dump)
+    def _cancel(msg):
+        bot.clear_step_handler_by_chat_id(msg.chat.id)
+        _send(msg.chat.id, '❌ Ввод отменен')
 
-    if(message.text == "Добавить пользователя"):
-        dostupi={}
-        file=open('dostup.txt', encoding='utf-8')
-        for i in file:
-            pup=i.strip().split(';')
-            
-            if(pup[2]=='+'):
-                dostupi[pup[0]]=pup[1]
-            else:
-                del dostupi[pup[0]]
-        file.close()
-        messs=''
-        for user in dostupi:
-            messs=messs+user+'  '+dostupi[user]+'\n'
+    handlers = {
+        '🏦 Выбор биржи': birgi,
+        '✅ Выключить Binance': _toggle_handler('binance', 'Binance', False),
+        '⬜️ Включить Binance': _toggle_handler('binance', 'Binance', True),
+        '✅ Выключить ByBit': _toggle_handler('bybit', 'ByBit', False),
+        '⬜️ Включить ByBit': _toggle_handler('bybit', 'ByBit', True),
+        '✖️ Назад': lambda msg: _send(msg.chat.id, '❌ Ввод отменен'),
+        '✖️ Отмена': _cancel,
+        '⚒️ Настроить': nastroiki,
+        '💬 Поддержка': dostup,
+        '🔐 Получить доступ': profil,
+        '💌 Суппорт': lambda msg: _send(msg.chat.id, '🤖 Есть вопросы по моей работе? Отпиши @lexcrypto1', profil_menu()),
+        '📈 Период лонг': _prompt_period('long', 'рост', period_time),
+        '🔺 Период памп': _prompt_period('short', 'памп', period_time),
+        '🔻 Период падение': _prompt_period('dump', 'падение', period_time),
+        '% роста': _prompt_percent('long', '📈Текущий % изменения цены роста –', procent_value),
+        '% пампа': _prompt_percent('short', '🔺Текущий % изменения цены пампа –', procent_value),
+        '% падения': _prompt_percent('dump', '🔻 Текущий % изменения цены падения –', procent_value),
+        'Добавить пользователя': _add_user_flow,
+        'Удалить пользователя': _delete_user_flow,
+    }
+
+    handler = handlers.get(message.text)
+    if handler:
+        handler(message)
         
-        msg = bot.send_message(message.chat.id, messs.strip())
-        messs='Введите ID пользователя для добавления: '
-        msg = bot.send_message(message.chat.id, messs,reply_markup=nazad_menu())
-        bot.register_next_step_handler(msg, send_id_add)
-    
-    if(message.text == "Удалить пользователя"):
-        dostupi={}
-        file=open('dostup.txt', encoding='utf-8')
-        for i in file:
-            pup=i.strip().split(';')
-            
-            if(pup[2]=='+'):
-                dostupi[pup[0]]=pup[1]
-            else:
-                del dostupi[pup[0]]
-        file.close()
-        messs=''
-        for user in dostupi:
-            messs=messs+user+'  '+dostupi[user]+'\n'
-        
-        msg = bot.send_message(message.chat.id, messs.strip())
-        messs='Введите ID пользователя для удаления: '
-        msg = bot.send_message(message.chat.id, messs,reply_markup=nazad_menu())
-        bot.register_next_step_handler(msg, send_id_del)
-    
-
-
 while(True):
     try:
         bot.infinity_polling(timeout=10, long_polling_timeout = 5)
-    except:
+    except Exception:
         print('Error!!!!')
+        time.sleep(2)
