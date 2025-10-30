@@ -5,27 +5,22 @@ from datetime import datetime
 from binance.um_futures import UMFutures
 from db import DatabaseManager
 import logging
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-bot = telebot.TeleBot('6653096426:AAFS69aAx7gG8JPew5HtjSIPdqUSsQB6bi4', threaded=False)
+bot = telebot.TeleBot(os.getenv("BOT_TOKEN"), threaded=False)
 
 # Создаем экземпляр базы данных
 db = DatabaseManager()
 
 # Загружаем отслеживаемые монеты из базы данных
 all_coins = db.get_tracked_coins('binance')
-
-def have_dostup(user_id):
-    """Проверяет, есть ли у пользователя активный доступ"""
-    return db.check_user_access(user_id)
-    
-def binance_vkl(user_id):
-    """Проверяет, включена ли биржа Binance для пользователя"""
-    exchanges = db.get_user_exchanges(user_id)
-    return exchanges.get('binance', '+') == '+'
 
 def prover_dubli(proshlie, user, sym, regim, vremya, prom):
     """Проверяет, был ли уже сигнал для данного пользователя/символа/режима."""
@@ -40,18 +35,18 @@ def prover_dubli(proshlie, user, sym, regim, vremya, prom):
 proshlie={}
 
 
-def process_symbol_binance(sym, dostupi, proshlie, cm_futures_client):
+def process_coin_binance(coin, dostupi, proshlie, cm_futures_client):
     """Обрабатывает один символ для всех пользователей через Binance API"""
     try:
-        prom = cm_futures_client.klines(sym, "1m")
+        prom = cm_futures_client.klines(coin, "1m")
         prom.reverse()
         
         if not prom or len(prom) < 2:
-            logger.warning(f"Binance: Нет данных для символа {sym}")
+            logger.warning(f"Binance: Нет данных для символа {coin}")
             return
         
         for user_id in dostupi:
-            if not have_dostup(user_id) or not binance_vkl(user_id):
+            if not db.check_user_access(user_id) or not db.get_user_exchanges(user_id).get('binance', '+') == '+':
                 continue
                 
             try:
@@ -61,14 +56,14 @@ def process_symbol_binance(sym, dostupi, proshlie, cm_futures_client):
                     try:
                         period_minutes = int(float(settings[regim][1]))
                         if period_minutes > len(prom):
-                            logger.warning(f"Binance: Недостаточно данных для периода {period_minutes} мин для {sym}")
+                            logger.warning(f"Binance: Недостаточно данных для периода {period_minutes} мин для {coin}")
                             continue
                             
                         current_price = float(prom[0][2])  # Цена закрытия текущей свечи
                         past_price = float(prom[period_minutes - 1][3])  # Цена открытия прошлой свечи
                         
                         if past_price == 0:
-                            logger.warning(f"Binance: Нулевая цена для {sym}")
+                            logger.warning(f"Binance: Нулевая цена для {coin}")
                             continue
                             
                         razn = ((current_price - past_price) / past_price) * 100
@@ -81,18 +76,18 @@ def process_symbol_binance(sym, dostupi, proshlie, cm_futures_client):
                             (regim == 'short' and razn > float(settings[regim][0])) or \
                             (regim == 'dump' and razn < -float(settings[regim][0]))
                         if condition:
-                            if prover_dubli(proshlie, user_id, sym, regim, period_minutes, prom):
-                                signal_sent = send_signal_binance(user_id, sym, regim, razn, settings[regim][1], 
+                            if prover_dubli(proshlie, user_id, coin, regim, period_minutes, prom):
+                                signal_sent = send_signal_binance(user_id, coin, regim, razn, settings[regim][1], 
                                                                past_price, current_price, 'binance', proshlie, prom[0][0])
                         
                         if signal_sent:
                             time.sleep(0.1)  # Небольшая пауза между сообщениями
                             
                     except ValueError as e:
-                        logger.error(f"Binance: Ошибка обработки данных для {sym}, пользователь {user_id}, режим {regim}: {e}")
+                        logger.error(f"Binance: Ошибка обработки данных для {coin}, пользователь {user_id}, режим {regim}: {e}")
                         continue
                     except IndexError as e:
-                        logger.error(f"Binance: Ошибка индекса для {sym}, пользователь {user_id}, режим {regim}: {e}")
+                        logger.error(f"Binance: Ошибка индекса для {coin}, пользователь {user_id}, режим {regim}: {e}")
                         continue
                         
             except Exception as e:
@@ -102,18 +97,18 @@ def process_symbol_binance(sym, dostupi, proshlie, cm_futures_client):
     except Exception as e:
         error_str = str(e)
         if "Invalid symbol status" in error_str or "-1122" in error_str:
-            logger.warning(f"Binance: Символ {sym} неактивен или удален с биржи")
+            logger.warning(f"Binance: Символ {coin} неактивен или удален с биржи")
             # Можно добавить автоматическую деактивацию символа
-            # db.query("UPDATE tracked_coins SET is_active = FALSE WHERE symbol = %s AND exchange_name = 'binance'", (sym,))
+            # db.query("UPDATE tracked_coins SET is_active = FALSE WHERE symbol = %s AND exchange_name = 'binance'", (coin,))
         else:
-            logger.error(f"Binance: Ошибка API для символа {sym}: {e}")
+            logger.error(f"Binance: Ошибка API для символа {coin}: {e}")
         return
 
-def send_signal_binance(user_id, sym, regim, razn, period, past_price, current_price, exchange, proshlie, timestamp):
+def send_signal_binance(user_id, coin, regim, razn, period, past_price, current_price, market, proshlie, timestamp):
     """Отправляет сигнал пользователю"""
     try:
         tekkkk = datetime.now().strftime("%Y-%m-%d")
-        signals_count = db.get_signals_count(user_id, tekkkk, sym, exchange)
+        signals_count = db.get_signals_count(user_id, tekkkk, coin, market)
         
         # Определяем тип сигнала и эмодзи
         if regim == 'long':
@@ -123,23 +118,23 @@ def send_signal_binance(user_id, sym, regim, razn, period, past_price, current_p
         else:  # dump
             signal_type = "🔻Падение"
         
-        mess = f'🏦{exchange.upper()} • {period}м • {sym}\n{signal_type}: {round(razn, 2)}% ({past_price}-{current_price})\n🔔Сигнал за сутки: {signals_count + 1}'
+        mess = f'🏦{market.upper()} • {period}м • {coin}\n{signal_type}: {round(razn, 2)}% ({past_price}-{current_price})\n🔔Сигнал за сутки: {signals_count + 1}'
         
         # Добавляем сигнал в базу данных
-        db.add_signal(user_id, tekkkk, sym, exchange, regim, timestamp)
+        db.add_signal(user_id, coin, market, regim, timestamp)
         
         # Обновляем историю сигналов
         if user_id not in proshlie:
             proshlie[user_id] = {'long': {}, 'short': {}, 'dump': {}}
-        proshlie[user_id][regim][sym] = timestamp
+        proshlie[user_id][regim][coin] = timestamp
         
         # Отправляем сообщение
         bot.send_message(int(user_id), mess)
-        logger.info(f"Binance: Отправлен сигнал {regim} для {sym} пользователю {user_id}")
+        logger.info(f"Binance: Отправлен сигнал {regim} для {coin} пользователю {user_id}")
         return True
         
     except Exception as e:
-        logger.error(f"Binance: Ошибка отправки сигнала для {sym} пользователю {user_id}: {e}")
+        logger.error(f"Binance: Ошибка отправки сигнала для {coin} пользователю {user_id}: {e}")
         return False
 
 while True:
@@ -149,8 +144,8 @@ while True:
         # Инициализируем клиент Binance
         cm_futures_client = UMFutures()
         cm_futures_client = UMFutures(
-            key='WxKoobMCG9Af1ylkcSgf70SBGBzB42yjo5oqfzre81ArrLO1ZKu3eVk2fD6wTm4X', 
-            secret='GD12Qzfbih0n1vaZmem1IAtCUsLgaS9hpGxZDWuRxd0NxjSt9ANItJQTdZoVCVbl'
+            key=os.getenv("BINANCE_API_KEY"), 
+            secret=os.getenv("BINANCE_API_SECRET"),
         )
         
         # Получаем всех пользователей с активным доступом
@@ -163,8 +158,8 @@ while True:
         
         logger.info(f"Binance: Обрабатываем {len(all_coins)} символов для {len(dostupi)} пользователей")
         
-        for sym in all_coins:
-            process_symbol_binance(sym, dostupi, proshlie, cm_futures_client)
+        for coin in all_coins:
+            process_coin_binance(coin, dostupi, proshlie, cm_futures_client)
             
         logger.info('Binance: Сканирование завершено')
         time.sleep(60)  # Пауза между циклами
