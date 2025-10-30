@@ -37,7 +37,7 @@ class DatabaseManager:
             dump_time DECIMAL(10,2) DEFAULT 20,
             dump_procent DECIMAL(10,2) DEFAULT 7,
             binance BOOLEAN DEFAULT TRUE,
-            bybit BOOLEAN DEFAULT TRUE,
+            bybit BOOLEAN DEFAULT TRUE
         );
 
         CREATE INDEX IF NOT EXISTS idx_user_subscription_end_date ON "user"(subscription_end_date);
@@ -114,8 +114,7 @@ class DatabaseManager:
         VALUES (%s, %s)
         ON CONFLICT (user_id)
         DO UPDATE SET 
-            subscription_end_date = EXCLUDED.subscription_end_date,
-            updated_at = CURRENT_TIMESTAMP
+            subscription_end_date = EXCLUDED.subscription_end_date
         """
         self.query(sql, (user_id, end_date))
     
@@ -123,8 +122,7 @@ class DatabaseManager:
         """Отзывает доступ пользователя: ставим subscription_end_date = CURRENT_DATE."""
         sql = """
         UPDATE "user"
-        SET subscription_end_date = CURRENT_DATE,
-            updated_at = CURRENT_TIMESTAMP
+        SET subscription_end_date = CURRENT_DATE
         WHERE user_id = %s
         """
         self.query(sql, (user_id,))
@@ -190,8 +188,7 @@ class DatabaseManager:
 
         sql_update = f"""
         UPDATE "user"
-        SET {column} = %s,
-            updated_at = CURRENT_TIMESTAMP
+        SET {column} = %s
         WHERE user_id = %s
         """
         self.query(sql_update, (value, user_id))
@@ -226,8 +223,7 @@ class DatabaseManager:
 
         sql_update = f"""
         UPDATE "user"
-        SET {exchange_name} = %s,
-            updated_at = CURRENT_TIMESTAMP
+        SET {exchange_name} = %s
         WHERE user_id = %s
         """
         self.query(sql_update, (is_enabled, user_id))
