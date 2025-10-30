@@ -126,7 +126,7 @@ def send_id_add(message):
         if(message.text.strip()!='<< Назад'):
             znach=int(message.text.strip())
             
-            messs='Введите дату окончания подписки для пользователя '+str(znach)
+            messs='Введите дату окончания подписки для пользователя '+str(znach)+' в формате ГГГГ-ММ-ДД: '
             msg = bot.send_message(message.chat.id, messs,reply_markup=nazad_menu())
             bot.register_next_step_handler(msg, send_data_add,str(znach))
         else:
