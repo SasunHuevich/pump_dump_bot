@@ -230,8 +230,5 @@ while(True):
         
         except:
             print('Miniii')
-            file=open('error.txt','a', encoding='utf-8')
-            file.write(sym+';bybit'+str(time.time())+'\n')
-            file.close()
              
         
