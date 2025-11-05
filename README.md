@@ -10,6 +10,7 @@
 
 ```bash
 sudo apt install -y docker || sudo dnf install -y docker
+```
 
 ---
 
