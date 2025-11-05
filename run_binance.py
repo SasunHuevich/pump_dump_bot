@@ -209,9 +209,6 @@ while(True):
                                     #input('scsdcsdcdCdscs')
         
         except:
-            print('Miniii')
-            file=open('error.txt','a', encoding='utf-8')
-            file.write(sym+';binance'+str(time.time())+'\n')
-            file.close()
+            print(f"[ERROR BINANCE] {sym}: {type(e).__name__}: {e}")
              
         
