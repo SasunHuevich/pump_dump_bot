@@ -142,7 +142,6 @@ while(True):
                 api_secret=os.getenv("BYBIT_API_SECRET"),
             )
             prom=safe_get_kline(
-                session,
                 category="linear",
                 symbol=sym,
                 interval='1',
