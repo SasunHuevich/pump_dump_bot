@@ -229,4 +229,4 @@ while(True):
                                     #input('scsdcsdcdCdscs')
         
         except:
-            print(f"[ERROR] {sym}: {type(e).__name__}: {e}")
+            print(f"[ERROR BYBIT] {sym}: {type(e).__name__}: {e}")
