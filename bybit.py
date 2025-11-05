@@ -112,6 +112,23 @@ while(True):
 
     slovar={}
 
+    def safe_get_kline(session, **kwargs):
+        for attempt in range(10):
+            try:
+                response = session.get_kline(**kwargs)
+                if isinstance(response, dict):
+                    if response.get("retCode") == 0:
+                        return response
+                    else:
+                        print(f"[WARN] Попытка {attempt+1}/10: retCode={response.get('retCode')}")
+                else:
+                    print(f"[WARN] Попытка {attempt+1}/10: неожиданный тип ответа ({type(response)})")
+            except Exception as e:
+                print(f"[ERROR] Попытка {attempt+1}/10: {e}")
+            time.sleep(3)
+
+        raise Exception("get_kline failed after 10 retries (no 200/retCode=0)")
+
 
     for sym in all_coins[:]:
         time_now=int(str(time.time()).split('.')[0]+'000')
@@ -124,7 +141,8 @@ while(True):
                 api_key=os.getenv("BYBIT_API_KEY"),
                 api_secret=os.getenv("BYBIT_API_SECRET"),
             )
-            prom=session.get_kline(
+            prom=safe_get_kline(
+                session,
                 category="linear",
                 symbol=sym,
                 interval='1',
