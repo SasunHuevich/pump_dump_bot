@@ -208,7 +208,7 @@ while(True):
                                     print('ERRORRR')
                                     #input('scsdcsdcdCdscs')
         
-        except Exception as e:
+        except:
             print(f"[ERROR BINANCE] {sym}: {type(e).__name__}: {e}")
              
         
