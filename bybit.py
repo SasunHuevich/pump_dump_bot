@@ -229,6 +229,4 @@ while(True):
                                     #input('scsdcsdcdCdscs')
         
         except:
-            print('Miniii')
-             
-        
+            print(f"[ERROR] {sym}: {type(e).__name__}: {e}")
