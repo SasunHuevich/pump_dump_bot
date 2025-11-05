@@ -228,5 +228,5 @@ while(True):
                                     print('ERRORRR')
                                     #input('scsdcsdcdCdscs')
         
-        except:
+        except Exception as e:
             print(f"[ERROR BYBIT] {sym}: {type(e).__name__}: {e}")
