@@ -18,6 +18,7 @@ services:
       - db
     environment:
       - DATABASE_URL=postgresql://user:pass@db:5432/bot_db
+      - TG_BOT_TOKEN=6653096426:AAFS69aAx7gG8JPew5HtjSIPdqUSsQB6bi4
 
 volumes:
   db_data:
