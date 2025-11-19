@@ -8,7 +8,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE user_settings (
-    user_id BIGINT PRIMARY KEY REFERENCES users(id),
+    user_id BIGINT PRIMARY KEY REFERENCES users(user_id),
     
     long_percent NUMERIC(5,2),
     long_minutes INT,
@@ -48,7 +48,7 @@ CREATE TYPE notification_enum AS ENUM (
 
 CREATE TABLE user_notifications (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id),
+    user_id BIGINT NOT NULL REFERENCES users(user_id),
     currency VARCHAR(15) NOT NULL,
     notification_type notification_enum NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
