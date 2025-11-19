@@ -1,6 +1,9 @@
+CREATE TYPE user_role AS ENUM ('user', 'admin');
+
 CREATE TABLE users (
     user_id BIGINT PRIMARY KEY,
     username VARCHAR(50),
+    role user_role NOT NULL DEFAULT 'user',
     subscription_end_date TIMESTAMP
 );
 
