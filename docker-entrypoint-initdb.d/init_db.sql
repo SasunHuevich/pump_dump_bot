@@ -20,6 +20,16 @@ CREATE TABLE user_settings (
     drop_minutes INT
 );
 
+CREATE TYPE exchange_name AS ENUM ('Binance', 'Bybit', 'BingX');
+
+CREATE TABLE user_exchanges (
+    user_id BIGINT REFERENCES users(user_id),
+    exchange exchange_name NOT NULL,
+    PRIMARY KEY (user_id, exchange)
+);
+
+CREATE INDEX idx_user_exchanges_user ON user_exchanges (user_id);
+
 CREATE TABLE currency_prices (
     id BIGSERIAL PRIMARY KEY,
     currency VARCHAR(15) NOT NULL,
