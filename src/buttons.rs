@@ -15,18 +15,11 @@ pub fn main_menu() -> KeyboardMarkup {
 }
 
 pub fn admin_menu() -> KeyboardMarkup {
-    KeyboardMarkup::new(vec![
-        vec![
-            KeyboardButton::new("🏦 Выбор биржи"),
-            KeyboardButton::new("⚒️ Настроить"),
-        ],
-        vec![
-            KeyboardButton::new("🔐 Получить доступ"),
-            KeyboardButton::new("💬 Поддержка"),
-        ],
-        vec![
-            KeyboardButton::new("👥 Управление пользователями"),
-        ],
-    ])
-    .resize_keyboard()
+    let mut buttons = main_menu().keyboard.clone();
+    
+    buttons.push(vec![
+        KeyboardButton::new("👥 Управление пользователями"),
+    ]);
+
+    KeyboardMarkup::new(buttons).resize_keyboard()
 }

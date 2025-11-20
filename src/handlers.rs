@@ -6,25 +6,32 @@ use crate::db;
 use crate::db::UserRole;
 
 pub async fn handle_message(pool: &PgPool, bot: Bot, msg: Message)  -> ResponseResult<()>{
+    let user_id = msg.from.as_ref().map(|u| u.id.0 as i64).unwrap();
+
+    let user_role = match db::get_user_role(pool, user_id).await {
+        Ok(role) => role,
+        Err(e) => {
+            bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?;
+            return Ok(());
+        }
+    };
+
+    if let UserRole::NoAccess = user_role {
+        let message_text = format!(
+            "Профиль пользователя {}\n\n🚨 Доступ к моим функциям закрыт.\nПо вопросам продления обратитесь к @lexcrypto1",
+            msg.chat.id
+        );
+        bot.send_message(msg.chat.id, message_text).await?;
+        return Ok(());
+    }
+
     if let Some(text) = msg.text() {
             match text {
                 "/start" => {
-                    let user_id = msg.from.as_ref().map(|u| u.id.0 as i64).unwrap();
-                    let user_role = match db::get_user_role(pool, user_id).await {
-                        Ok(role) => role,
-                        Err(e) => {
-                            bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?;
-                            return Ok(());
-                        }
-                    };
-
                     let menu = match user_role {
                         UserRole::Admin => buttons::admin_menu(),
                         UserRole::User => buttons::main_menu(),
-                        UserRole::NoAccess => {
-                            bot.send_message(msg.chat.id, "У вас нет доступа").await?;
-                            return Ok(());
-                        }
+                        UserRole::NoAccess => unreachable!(),
                     };
 
                     let welcome_text = r#"👋🏻Привет\.
