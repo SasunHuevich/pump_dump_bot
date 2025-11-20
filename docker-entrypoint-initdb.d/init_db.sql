@@ -1,4 +1,4 @@
-CREATE TYPE user_role AS ENUM ('user', 'admin');
+CREATE TYPE user_role AS ENUM ('user', 'admin', 'no_access');
 
 CREATE TABLE users (
     user_id BIGINT PRIMARY KEY,
@@ -56,3 +56,9 @@ CREATE TABLE user_notifications (
 
 CREATE INDEX idx_user_notifications_user_type_date
 ON user_notification (user_id, notification_type, created_at);
+
+CREATE TABLE user_state (
+    user_id BIGINT PRIMARY KEY REFERENCES users(user_id),
+    state TEXT NOT NULL,
+    data JSONB
+);
