@@ -1,6 +1,7 @@
 use teloxide::prelude::*;
 
 mod handlers;
+mod buttons;
 
 #[tokio::main]
 async fn main() {

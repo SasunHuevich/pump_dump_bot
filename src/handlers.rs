@@ -1,5 +1,7 @@
 use teloxide::prelude::*;
 
+use crate::buttons;
+
 pub async fn handle_message(bot: Bot, msg: Message)  -> ResponseResult<()>{
     if let Some(text) = msg.text() {
             match text {
@@ -12,6 +14,7 @@ pub async fn handle_message(bot: Bot, msg: Message)  -> ResponseResult<()>{
 🔻Дамп \(резкое падение цены\), для торговли на коррекцию падения\."#;
                     bot.send_message(msg.chat.id, welcome_text)
                     .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                    .reply_markup(buttons::main_menu())
                     .await?;
                 }
 
