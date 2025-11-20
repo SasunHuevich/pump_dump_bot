@@ -1,8 +1,25 @@
 use teloxide::prelude::*;
 
-let bot = Bot::from_env();
+pub async fn handle_message(bot: Bot, msg: Message)  -> ResponseResult<()>{
+    if let Some(text) = msg.text() {
+            match text {
+                "/start" => {
+                    let welcome_text = r#"👋🏻Привет\.
+Этот бот сканирует рынок на:
 
-teloxide::repl(bot, |bot: Bot, msg::Message| async move {
-    bot.send_dice(msg.chat.id).await?;
-    Ok(())
-}).await;
+📈Небольшой рост, для входа в ЛОНГ\;
+🔺Памп \(резкий рост\), для входа в ШОРТ\;
+🔻Дамп \(резкое падение цены\), для торговли на коррекцию падения\."#;
+                    bot.send_message(msg.chat.id, welcome_text)
+                    .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                    .await?;
+                }
+
+                other => {
+                bot.send_message(msg.chat.id, format!("Вы написали: {other}"))
+                .await?;
+            }
+            }  
+        }
+        Ok(())
+}
