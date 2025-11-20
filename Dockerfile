@@ -1,22 +1,20 @@
-# Используем официальный Rust-образ
-FROM rust:1.85 as builder
+FROM rust:1.91-bullseye AS builder
 
-# Создаём рабочую директорию
-WORKDIR /usr/src/bot
+# Устанавливаем зависимости для сборки с OpenSSL
+RUN apt-get update && apt-get install -y libssl-dev pkg-config ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Копируем файлы проекта
+WORKDIR /usr/src/app
 COPY . .
 
-# Собираем проект в релизе
 RUN cargo build --release
 
 # Минимальный образ для запуска
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
-WORKDIR /usr/src/bot
+# Устанавливаем runtime зависимости
+RUN apt-get update && apt-get install -y libssl1.1 ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Копируем бинарник из билдера
-COPY --from=builder /usr/src/bot/target/release/pump_dump_bot .
+WORKDIR /usr/src/app
+COPY --from=builder /usr/src/app/target/release/pump_dump_bot .
 
-# Команда запуска
 CMD ["./pump_dump_bot"]
