@@ -23,3 +23,20 @@ pub fn admin_menu() -> KeyboardMarkup {
 
     KeyboardMarkup::new(buttons).resize_keyboard()
 }
+
+pub fn add_user_menu() -> KeyboardMarkup {
+    KeyboardMarkup::new(vec![
+        vec![
+            KeyboardButton::new("➕ Пользователь"),
+            KeyboardButton::new("➖ Пользователь"),
+        ],
+        vec![
+            KeyboardButton::new("➕ Админ"),
+            KeyboardButton::new("➖ Админ"),
+        ],
+        vec![
+            KeyboardButton::new("✖️ Назад"),
+        ],
+    ])
+    .resize_keyboard()
+}

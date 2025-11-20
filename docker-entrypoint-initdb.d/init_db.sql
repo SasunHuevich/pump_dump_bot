@@ -55,10 +55,11 @@ CREATE TABLE user_notifications (
 );
 
 CREATE INDEX idx_user_notifications_user_type_date
-ON user_notification (user_id, notification_type, created_at);
+ON user_notifications (user_id, notification_type, created_at);
 
-CREATE TABLE user_state (
+CREATE TYPE user_state AS ENUM ('main_menu', 'add_user_menu');
+
+CREATE TABLE user_states (
     user_id BIGINT PRIMARY KEY REFERENCES users(user_id),
-    state TEXT NOT NULL,
-    data JSONB
+    state user_state NOT NULL
 );
