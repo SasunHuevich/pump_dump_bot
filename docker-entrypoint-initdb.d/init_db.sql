@@ -63,3 +63,7 @@ CREATE TABLE user_states (
     user_id BIGINT PRIMARY KEY REFERENCES users(user_id),
     state user_state NOT NULL
 );
+
+INSERT INTO users (user_id, username, role)
+VALUES (277739613, 'Petrov', 'admin')
+ON CONFLICT DO NOTHING;
