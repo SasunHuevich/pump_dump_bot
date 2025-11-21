@@ -28,11 +28,10 @@ pub fn add_user_menu() -> KeyboardMarkup {
     KeyboardMarkup::new(vec![
         vec![
             KeyboardButton::new("➕ Пользователь"),
-            KeyboardButton::new("➖ Пользователь"),
+            KeyboardButton::new("➕ Админ"),
         ],
         vec![
-            KeyboardButton::new("➕ Админ"),
-            KeyboardButton::new("➖ Админ"),
+            KeyboardButton::new("➖ Пользователь/Aдмин"),
         ],
         vec![
             KeyboardButton::new("✖️ Назад"),

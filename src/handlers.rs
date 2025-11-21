@@ -108,10 +108,6 @@ pub async fn handle_message(pool: &PgPool, bot: Bot, msg: Message)  -> ResponseR
                         bot.send_message(msg.chat.id, format!("Затычка: ➕ Админ")).await?;
                     }
 
-                    "➖ Админ" => {
-                        bot.send_message(msg.chat.id, format!("Затычка: ➖ Админ")).await?;
-                    }
-
                     "✖️ Назад" => {
                         if let Err(e) = db::set_user_state(pool, user_id, &UserState::MainMenu).await {
                             bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?; //TODO: Все такие места обработать по нормальному
