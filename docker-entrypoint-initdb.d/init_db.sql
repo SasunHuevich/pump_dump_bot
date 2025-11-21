@@ -4,31 +4,27 @@ CREATE TABLE users (
     user_id BIGINT PRIMARY KEY,
     username VARCHAR(50),
     role user_role NOT NULL DEFAULT 'user',
-    subscription_end_date TIMESTAMP
+    subscription_end_date TIMESTAMP DEFAULT NULL
 );
 
 CREATE TABLE user_settings (
     user_id BIGINT PRIMARY KEY REFERENCES users(user_id),
+
+    binance BOOLEAN DEFAULT FALSE,
+    bybit BOOLEAN DEFAULT FALSE,
+    bingx BOOLEAN DEFAULT FALSE,
     
-    long_percent NUMERIC(5,2),
-    long_minutes INT,
+    long_percent NUMERIC(5,2) DEFAULT 3.0,
+    long_minutes INT DEFAULT 5,
 
-    short_percent NUMERIC(5,2),
-    short_minutes INT,
+    short_percent NUMERIC(5,2) DEFAULT 7.0,
+    short_minutes INT DEFAULT 20,
 
-    drop_percent NUMERIC(5,2),
-    drop_minutes INT
+    drop_percent NUMERIC(5,2) DEFAULT -7.0,
+    drop_minutes INT DEFAULT 20
 );
 
-CREATE TYPE exchange_name AS ENUM ('Binance', 'Bybit', 'BingX');
-
-CREATE TABLE user_exchanges (
-    user_id BIGINT REFERENCES users(user_id),
-    exchange exchange_name NOT NULL,
-    PRIMARY KEY (user_id, exchange)
-);
-
-CREATE INDEX idx_user_exchanges_user ON user_exchanges (user_id);
+CREATE INDEX idx_user_settings_user ON user_settings (user_id);
 
 CREATE TABLE currency_prices (
     id BIGSERIAL PRIMARY KEY,
@@ -57,7 +53,7 @@ CREATE TABLE user_notifications (
 CREATE INDEX idx_user_notifications_user_type_date
 ON user_notifications (user_id, notification_type, created_at);
 
-CREATE TYPE user_state AS ENUM ('main_menu', 'add_user_menu');
+CREATE TYPE user_state AS ENUM ('main_menu', 'add_user_menu', 'add_user_button');
 
 CREATE TABLE user_states (
     user_id BIGINT PRIMARY KEY REFERENCES users(user_id),
@@ -66,4 +62,8 @@ CREATE TABLE user_states (
 
 INSERT INTO users (user_id, username, role)
 VALUES (277739613, 'Petrov', 'admin')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO user_settings (user_id)
+VALUES (277739613)
 ON CONFLICT DO NOTHING;

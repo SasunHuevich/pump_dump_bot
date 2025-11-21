@@ -27,24 +27,31 @@ pub enum UserRole {
 pub enum UserState {
     #[sqlx(rename = "main_menu")]
     MainMenu,
+
     #[sqlx(rename = "add_user_menu")]
     AddUserMenu,
+
+    #[sqlx(rename = "add_user_button")]
+    AddUserButton,
 }
 
 
 pub async fn add_user(
         pool: &PgPool,
-        user_id: i64,
-        username: &str, 
-        // subscription_end_date: NaiveDate,
+        user_id: i64
     ) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT INTO users (user_id, username) VALUES ($1, $2) 
-        ON CONFLICT (user_id) DO UPDATE SET subscription_end_date = EXCLUDED.subscription_end_date")
+    sqlx::query("INSERT INTO users (user_id) VALUES ($1) 
+        ON CONFLICT (user_id) DO NOTHING")
         .bind(user_id)
-        .bind(username)
-        // .bind(subscription_end_date)
         .execute(pool)
         .await?;
+
+    sqlx::query("INSERT INTO user_settings (user_id) VALUES ($1) 
+        ON CONFLICT (user_id) DO NOTHING")
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+
     Ok(())
 }
 

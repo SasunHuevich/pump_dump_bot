@@ -5,6 +5,8 @@ use sqlx::PgPool;
 use crate::buttons;
 use crate::db;
 use crate::db::{UserRole, UserState};
+use crate::texts::*;
+use crate::misc;
 
 pub async fn handle_message(pool: &PgPool, bot: Bot, msg: Message)  -> ResponseResult<()>{
     let user_id = msg.from.as_ref().map(|u| u.id.0 as i64).unwrap();
@@ -39,20 +41,9 @@ pub async fn handle_message(pool: &PgPool, bot: Bot, msg: Message)  -> ResponseR
             if let Some(text) = msg.text() {
                 match text {
                     "/start" => {
-                        let menu = match user_role {
-                            UserRole::Admin => buttons::admin_menu(),
-                            UserRole::User => buttons::main_menu(),
-                            UserRole::NoAccess => unreachable!(),
-                        };
+                        let menu = misc::get_main_menu_by_role(&user_role);
 
-                        let welcome_text = r#"👋🏻Привет\.
-Этот бот сканирует рынок на:
-
-📈Небольшой рост, для входа в ЛОНГ\;
-🔺Памп \(резкий рост\), для входа в ШОРТ\;
-🔻Дамп \(резкое падение цены\), для торговли на коррекцию падения\."#;
-
-                        bot.send_message(msg.chat.id, welcome_text)
+                        bot.send_message(msg.chat.id, START_MESSAGE)
                         .parse_mode(teloxide::types::ParseMode::MarkdownV2)
                         .reply_markup(menu)
                         .await?;
@@ -101,7 +92,12 @@ pub async fn handle_message(pool: &PgPool, bot: Bot, msg: Message)  -> ResponseR
             if let Some(text) = msg.text() {
                 match text {
                     "➕ Пользователь" => {
-                        bot.send_message(msg.chat.id, format!("Затычка: ➕ Пользователь")).await?;
+                        if let Err(e) = db::set_user_state(pool, user_id, &UserState::AddUserButton).await {
+                            bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?; //TODO: Все такие места обработать по нормальному
+                            return Ok(())
+                        }
+
+                        bot.send_message(msg.chat.id, format!("Введите ID пользователя для добавления:")).await?;
                     }
 
                     "➖ Пользователь" => {
@@ -117,13 +113,65 @@ pub async fn handle_message(pool: &PgPool, bot: Bot, msg: Message)  -> ResponseR
                     }
 
                     "✖️ Назад" => {
-                        bot.send_message(msg.chat.id, format!("Затычка: ✖️ Назад")).await?;
+                        if let Err(e) = db::set_user_state(pool, user_id, &UserState::MainMenu).await {
+                            bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?; //TODO: Все такие места обработать по нормальному
+                            return Ok(())
+                        }
+
+                        let menu = misc::get_main_menu_by_role(&user_role);
+
+                        bot.send_message(msg.chat.id, format!("Затычка: ✖️ Назад"))
+                        .reply_markup(menu)
+                        .await?;
                     }
 
                     other => {
                         bot.send_message(msg.chat.id, format!("Вы написали: {other}")).await?;
                     }
                 }
+            }
+        }
+
+        UserState::AddUserButton => {
+            if let Some(text) = msg.text() {
+                match text {
+                    "✖️ Назад" => {
+                        if let Err(e) = db::set_user_state(pool, user_id, &UserState::AddUserMenu).await {
+                            bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?; //TODO: Все такие места обработать по нормальному
+                            return Ok(())
+                        }
+
+                        bot.send_message(msg.chat.id, "Выберите действие:").await?;
+
+                        return Ok(());
+                    }
+                    _ => {
+                         match text.parse::<i64>() {
+                            Ok(new_user_id) => {
+                                match db::add_user(pool, new_user_id).await {
+                                    Ok(_) => {
+                                        if let Err(e) = db::set_user_state(pool, user_id, &UserState::AddUserMenu).await {
+                                            bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?; //TODO: Все такие места обработать по нормальному
+                                            return Ok(())
+                                        }
+
+                                        bot.send_message(msg.chat.id, format!("Пользователь {} успешно добавлен!", new_user_id))
+                                            .await?;
+                                    }
+                                    Err(e) => {
+                                        bot.send_message(msg.chat.id, format!("Ошибка при добавлении пользователя: {}", e))
+                                            .await?;
+                                    }
+                                }
+                            }
+                            Err(_) => {
+                                bot.send_message(msg.chat.id, "Некорректный ID. Пожалуйста, отправьте числовой ID пользователя.")
+                                    .await?;
+                            }
+                        }
+                    }
+                }
+               
             }
         }
     }
