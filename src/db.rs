@@ -55,6 +55,31 @@ pub async fn add_user(
     Ok(())
 }
 
+pub async fn add_admin(pool: &PgPool, user_id: i64) -> Result<(), sqlx::Error> {
+    add_user(pool, user_id).await?;
+
+    sqlx::query("UPDATE users SET role = 'admin' WHERE user_id = $1")
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
+pub async fn delete_user(pool: &PgPool, user_id: i64) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM user_settings WHERE user_id = $1")
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+
+    sqlx::query("DELETE FROM users WHERE user_id = $1")
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
 pub async fn get_user_role(pool: &PgPool, user_id: i64) -> Result<UserRole, sqlx::Error> {
     let row = sqlx::query_as::<_, (UserRole,)>("SELECT role FROM users WHERE user_id = $1")
         .bind(user_id)

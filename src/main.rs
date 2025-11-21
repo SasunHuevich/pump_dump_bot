@@ -4,8 +4,8 @@ use std::sync::Arc;
 mod handlers;
 mod buttons;
 mod db;
-mod texts;
-mod misc;
+mod texts;mod misc;
+mod handlers_ext;
 
 #[tokio::main]
 async fn main() {
