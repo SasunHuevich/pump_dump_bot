@@ -11,11 +11,17 @@ pub async fn handle_add_user_menu(pool: &PgPool, bot: Bot, msg: Message, user_id
         match text {
             "➕ Пользователь" => {
                 if let Err(e) = db::set_user_state(pool, user_id, &UserState::AddUserButton).await {
-                    bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?; //TODO: Все такие места обработать по нормальному
+                    bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e))
+                    .await?; //TODO: Все такие места обработать по нормальному
                     return Ok(())
                 }
 
-                bot.send_message(msg.chat.id, format!("Введите ID пользователя для добавления:")).await?;
+                bot.send_message(
+                    msg.chat.id,
+                    "Введите ID пользователя и дату окончания подписки.\n\nФормат:\n<user_id> <YYYY-MM-DD>\n\nНапример:\n123456789 2025-01-15"
+                )
+                .reply_markup(buttons::back_menu())
+                .await?;
             }
 
             "➖ Пользователь" => {

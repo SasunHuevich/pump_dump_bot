@@ -6,7 +6,8 @@ edition = "2024"
 [dependencies]
 tokio= {version = "1", features = ["full"]}
 teloxide = "0.17"
-sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio-native-tls", "macros"] }
+sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio-native-tls", "macros", "chrono"] }
 dotenv = "0.15"
 serde = { version = "1.0.145", features = ["derive"] }
 serde_json = "1.0.145"
+chrono = "0.4.42"

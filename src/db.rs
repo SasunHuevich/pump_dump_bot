@@ -2,6 +2,7 @@ use sqlx::PgPool;
 use std::env;
 use dotenv::dotenv;
 use serde::{Serialize, Deserialize};
+use chrono::NaiveDate;
 
 pub async fn init_db() -> PgPool {
     dotenv().ok();
@@ -38,11 +39,13 @@ pub enum UserState {
 
 pub async fn add_user(
         pool: &PgPool,
-        user_id: i64
+        user_id: i64,
+        subscription_end_date: Option<NaiveDate>
     ) -> Result<(), sqlx::Error> {
     sqlx::query("INSERT INTO users (user_id) VALUES ($1) 
-        ON CONFLICT (user_id) DO NOTHING")
+        ON CONFLICT (user_id) DO UPDATE SET subscription_end_date = EXCLUDED.subscription_end_date")
         .bind(user_id)
+        .bind(subscription_end_date)
         .execute(pool)
         .await?;
 
@@ -56,7 +59,7 @@ pub async fn add_user(
 }
 
 pub async fn add_admin(pool: &PgPool, user_id: i64) -> Result<(), sqlx::Error> {
-    add_user(pool, user_id).await?;
+    add_user(pool, user_id, None).await?;
 
     sqlx::query("UPDATE users SET role = 'admin' WHERE user_id = $1")
         .bind(user_id)

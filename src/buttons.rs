@@ -39,3 +39,12 @@ pub fn add_user_menu() -> KeyboardMarkup {
     ])
     .resize_keyboard()
 }
+
+pub fn back_menu() -> KeyboardMarkup {
+    KeyboardMarkup::new(vec![
+        vec![
+            KeyboardButton::new("✖️ Назад"),
+        ],
+    ])
+    .resize_keyboard()
+}
