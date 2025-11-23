@@ -42,7 +42,7 @@ pub async fn add_user(
         user_id: i64,
         subscription_end_date: Option<NaiveDate>
     ) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT INTO users (user_id) VALUES ($1) 
+    sqlx::query("INSERT INTO users (user_id, subscription_end_date) VALUES ($1, $2) 
         ON CONFLICT (user_id) DO UPDATE SET subscription_end_date = EXCLUDED.subscription_end_date")
         .bind(user_id)
         .bind(subscription_end_date)
