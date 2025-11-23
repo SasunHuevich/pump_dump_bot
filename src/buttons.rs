@@ -1,5 +1,8 @@
 use teloxide::types::{KeyboardButton, KeyboardMarkup};
 
+use crate::db;
+use crate::db::{EnableExchanges};
+
 pub fn main_menu() -> KeyboardMarkup {
     KeyboardMarkup::new(vec![
         vec![
@@ -42,6 +45,26 @@ pub fn add_user_menu() -> KeyboardMarkup {
 
 pub fn back_menu() -> KeyboardMarkup {
     KeyboardMarkup::new(vec![
+        vec![
+            KeyboardButton::new("✖️ Назад"),
+        ],
+    ])
+    .resize_keyboard()
+}
+
+pub fn exchange_menu(user_id: i64, enable_exchanges: db::EnableExchanges) -> KeyboardMarkup{
+    KeyboardMarkup::new(vec![
+        vec![
+            KeyboardButton::new(
+                format!("Binance: {}", if enable_exchanges.binance { "✅" } else { "❌" })
+            ),
+            KeyboardButton::new(
+                format!("Bybit: {}", if enable_exchanges.bybit { "✅" } else { "❌" })
+            ),
+            KeyboardButton::new(
+                format!("Bingx: {}", if enable_exchanges.bingx { "✅" } else { "❌" })
+            ),
+        ],
         vec![
             KeyboardButton::new("✖️ Назад"),
         ],

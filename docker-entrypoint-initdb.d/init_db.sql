@@ -53,7 +53,14 @@ CREATE TABLE user_notifications (
 CREATE INDEX idx_user_notifications_user_type_date
 ON user_notifications (user_id, notification_type, created_at);
 
-CREATE TYPE user_state AS ENUM ('main_menu', 'add_user_menu', 'add_user_button', 'add_admin_button', 'delete_user_button');
+CREATE TYPE user_state AS ENUM (
+    'main_menu', 
+    'add_user_menu', 
+    'add_user_button', 
+    'add_admin_button', 
+    'delete_user_button',
+    'choosing_exchange_menu'
+    );
 
 CREATE TABLE user_states (
     user_id BIGINT PRIMARY KEY REFERENCES users(user_id),

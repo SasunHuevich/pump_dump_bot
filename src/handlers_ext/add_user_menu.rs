@@ -62,13 +62,13 @@ pub async fn handle_add_user_menu(pool: &PgPool, bot: Bot, msg: Message, user_id
 
                 let menu = misc::get_main_menu_by_role(&user_role);
 
-                bot.send_message(msg.chat.id, format!("Затычка: ✖️ Назад"))
+                bot.send_message(msg.chat.id, format!("✖️ Назад"))
                 .reply_markup(menu)
                 .await?;
             }
 
             other => {
-                bot.send_message(msg.chat.id, format!("Вы написали: {other}")).await?;
+                bot.send_message(msg.chat.id, "Не понял команду 😕").await?;
             }
         }
     }

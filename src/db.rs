@@ -40,6 +40,9 @@ pub enum UserState {
 
     #[sqlx(rename = "delete_user_button")]
     DeleteUserButton,
+
+    #[sqlx(rename = "choosing_exchange_menu")]
+    ChoosingExchangeMenu,
 }
 
 
@@ -119,4 +122,38 @@ pub async fn get_user_state(pool: &PgPool, user_id: i64) -> Result<UserState, sq
     let state = row.map(|r| r.0).unwrap_or(UserState::MainMenu);
 
     Ok(state)
+}
+
+
+pub async fn switch_exchange_state (
+    pool: &PgPool,
+    user_id: i64,
+    exchange: &str
+) -> Result<(), sqlx::Error> {
+    let query = format!(
+        "UPDATE user_settings SET {col} = NOT {col} WHERE user_id = $1",
+        col = exchange
+    );
+
+     sqlx::query(&query)
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+#[derive(sqlx::FromRow)]
+pub struct EnableExchanges {
+    pub binance: bool,
+    pub bybit: bool,
+    pub bingx: bool,
+}
+
+pub async fn get_exchanges(pool: &PgPool, user_id: i64) -> Result<EnableExchanges, sqlx::Error> {
+    sqlx::query_as::<_, EnableExchanges>(
+        "SELECT binance, bybit, bingx FROM user_settings WHERE user_id = $1"
+    )
+    .bind(user_id)
+    .fetch_one(pool)
+    .await
 }

@@ -20,7 +20,26 @@ pub async fn handle_main_menu(pool: &PgPool, bot: Bot, msg: Message, user_id: i6
             }
 
             "🏦 Выбор биржи" => {
-                bot.send_message(msg.chat.id, format!("Затычка: 🏦 Выбор бирж")).await?;
+                if let Err(e) = db::set_user_state(pool, user_id, &UserState::ChoosingExchangeMenu).await {
+                    bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?;
+                }
+
+                 let enable_exchanges = match db::get_exchanges(pool, user_id).await {
+                    Ok(ex) => ex,
+                    Err(e) => {
+                        bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?;
+                        return Ok(());
+                    }
+                };
+
+                let menu = buttons::exchange_menu(user_id, enable_exchanges);
+
+                bot.send_message(
+                    msg.chat.id,
+                    "Включить / выключить сигналы с бирж:\n\n✅ - биржа ВКЛЮЧЕНА\n❌ - биржа ВЫКЛЮЧЕНА",
+                )
+                .reply_markup(menu)
+                .await?;
             }
 
             "⚒️ Настроить" => {
@@ -52,7 +71,7 @@ pub async fn handle_main_menu(pool: &PgPool, bot: Bot, msg: Message, user_id: i6
             }
 
             other => {
-                bot.send_message(msg.chat.id, format!("Вы написали: {other}")).await?;
+                bot.send_message(msg.chat.id, "Не понял команду 😕").await?;
             }
         }
     }
