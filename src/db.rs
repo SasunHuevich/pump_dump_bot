@@ -34,6 +34,9 @@ pub enum UserState {
 
     #[sqlx(rename = "add_user_button")]
     AddUserButton,
+
+    #[sqlx(rename = "add_admin_button")]
+    AddAdminButton,
 }
 
 
