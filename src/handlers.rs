@@ -6,7 +6,7 @@ use crate::db;
 use crate::db::{UserRole, UserState};
 use crate::texts::*;
 use crate::misc;
-use crate::handlers_ext::{main_menu, add_user_menu, add_user_button, add_admin_button};
+use crate::handlers_ext::{main_menu, add_user_menu, add_user_button, add_admin_button, delete_user_button};
 
 pub async fn handle_message(pool: &PgPool, bot: Bot, msg: Message)  -> ResponseResult<()>{
     let user_id = msg.from.as_ref().map(|u| u.id.0 as i64).unwrap();
@@ -51,6 +51,9 @@ pub async fn handle_message(pool: &PgPool, bot: Bot, msg: Message)  -> ResponseR
 
         UserState::AddAdminButton => {
             add_admin_button::handle_add_admin_button(pool, bot, msg, user_id, user_role).await?;
+        }
+        UserState::DeleteUserButton => {
+            delete_user_button::handle_delete_user_button(pool, bot, msg, user_id, user_role).await?;
         }
     }
     

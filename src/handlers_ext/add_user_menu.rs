@@ -40,7 +40,18 @@ pub async fn handle_add_user_menu(pool: &PgPool, bot: Bot, msg: Message, user_id
             }
 
             "➖ Пользователь/Aдмин" => {
-                bot.send_message(msg.chat.id, format!("Затычка: Пользователь/Aдмин")).await?;
+                if let Err(e) = db::set_user_state(pool, user_id, &UserState::DeleteUserButton).await {
+                    bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e))
+                    .await?; //TODO: Все такие места обработать по нормальному
+                    return Ok(())
+                }
+
+                bot.send_message(
+                    msg.chat.id,
+                    "Введите ID пользователя"
+                )
+                .reply_markup(buttons::back_menu())
+                .await?;
             }
 
             "✖️ Назад" => {
