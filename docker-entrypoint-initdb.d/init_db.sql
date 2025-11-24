@@ -28,7 +28,7 @@ CREATE INDEX idx_user_settings_user ON user_settings (user_id);
 
 CREATE TABLE currency_prices (
     id BIGSERIAL PRIMARY KEY,
-    currency VARCHAR(15) NOT NULL,
+    currency VARCHAR(50) NOT NULL,
     price NUMERIC(18,8) NOT NULL,
     exchange VARCHAR(50) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()

@@ -110,7 +110,62 @@ pub async fn update_bybit_prices(pool: &PgPool, client: &Client) {
             }
         }
         Err(e) => {
-            error!("Ошибка получения цен с Binance: {}", e);
+            error!("Ошибка получения цен с Bybit: {}", e);
+        }
+    }
+}
+
+
+#[derive(Deserialize)]
+pub struct BingxPrice {
+    pub symbol: String,
+    pub price: String,
+    pub time: i64,
+}
+
+#[derive(Deserialize)]
+struct BingxResponse {
+    data: Vec<BingxPrice>,
+}
+
+pub async fn fetch_bingx_prices(client: &Client) -> Result<Vec<UnifiedPrice>, reqwest::Error> {
+    let resp = client
+        .get("https://open-api.bingx.com/openApi/swap/v2/quote/price")
+        .send()
+        .await?
+        .json::<BingxResponse>()
+        .await?;
+
+    let unified: Vec<UnifiedPrice> = resp.data
+        .into_iter()
+        .filter_map(|p| {
+        match p.price.parse::<f64>() {
+            Ok(price) => Some(UnifiedPrice {
+                currency: p.symbol,
+                price: price,
+                exchange: "bingx".to_string(),
+                timestamp: p.time,
+            }),
+            Err(e) => {
+                warn!("Не удалось распарсить цену для {}: {}", p.symbol, e);
+                None
+            }
+        }
+    })
+    .collect();
+
+    Ok(unified)
+}
+
+pub async fn update_bingx_prices(pool: &PgPool, client: &Client) {
+    match fetch_bingx_prices(client).await {
+        Ok(prices) => {
+            if let Err(e) = db::insert_currency_prices_bulk(pool, &prices).await {
+                error!("Ошибка insert_prices_bulk: {}", e);
+            }
+        }
+        Err(e) => {
+            error!("Ошибка получения цен с Bingx: {}", e);
         }
     }
 }
