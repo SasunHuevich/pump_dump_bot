@@ -1,11 +1,16 @@
 use teloxide::prelude::*;
 use std::sync::Arc;
+use tokio;
+use reqwest::Client;
+use log::{info, warn, error};
 
 mod handlers;
 mod buttons;
 mod db;
-mod texts;mod misc;
+mod texts;
+mod misc;
 mod handlers_ext;
+mod exchanges;
 
 #[tokio::main]
 async fn main() {
@@ -13,6 +18,19 @@ async fn main() {
 
     let bot = Bot::from_env();
     let db_pool = Arc::new(db::init_db().await);
+
+    {
+        let db_pool = Arc::clone(&db_pool);
+        tokio::spawn(async move {
+            let client = Client::new();
+
+            loop {
+                exchanges::update_binance_prices(&db_pool, &client).await;
+
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            }
+        });
+    }
 
     teloxide::repl(bot, {
         let db_pool = Arc::clone(&db_pool);

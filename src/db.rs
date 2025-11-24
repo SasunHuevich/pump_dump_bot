@@ -157,3 +157,30 @@ pub async fn get_exchanges(pool: &PgPool, user_id: i64) -> Result<EnableExchange
     .fetch_one(pool)
     .await
 }
+
+pub struct UnifiedPrice {
+    pub currency: String,
+    pub price: f64,
+    pub exchange: String,
+    pub timestamp: i64,
+}
+
+pub async fn insert_currency_prices_bulk(pool: &PgPool, list: &[UnifiedPrice]) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+
+    for p in list {
+        sqlx::query(
+            "INSERT INTO currency_prices (currency, price, exchange, created_at)
+            VALUES ($1, $2, $3, to_timestamp($4 / 1000.0))"
+        )
+        .bind(&p.currency)
+        .bind(p.price)
+        .bind(&p.exchange)
+        .bind(p.timestamp)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
