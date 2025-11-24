@@ -26,8 +26,9 @@ async fn main() {
 
             loop {
                 exchanges::update_binance_prices(&db_pool, &client).await;
+                exchanges::update_bybit_prices(&db_pool, &client).await;
 
-                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                tokio::time::sleep(std::time::Duration::from_secs(60)).await;
             }
         });
     }

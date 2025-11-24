@@ -55,3 +55,62 @@ pub async fn update_binance_prices(pool: &PgPool, client: &Client) {
         }
     }
 }
+
+
+#[derive(Deserialize)]
+pub struct BybitPrice {
+    pub symbol: String,
+    pub lastPrice: String,
+}
+
+#[derive(Deserialize)]
+struct BybitResponse {
+    result: BybitResult,
+}
+
+#[derive(Deserialize)]
+struct BybitResult {
+    list: Vec<BybitPrice>,
+}
+
+pub async fn fetch_bybit_prices(client: &Client) -> Result<Vec<UnifiedPrice>, reqwest::Error> {
+    let resp = client
+        .get("https://api.bybit.com/v5/market/tickers?category=inverse")
+        .send()
+        .await?
+        .json::<BybitResponse>()
+        .await?;
+
+    let unified: Vec<UnifiedPrice> = resp.result.list
+        .into_iter()
+        .filter_map(|p| {
+        match p.lastPrice.parse::<f64>() {
+            Ok(lastPrice) => Some(UnifiedPrice {
+                currency: p.symbol,
+                price: lastPrice,
+                exchange: "bybit".to_string(),
+                timestamp: chrono::Utc::now().timestamp_millis(),
+            }),
+            Err(e) => {
+                warn!("Не удалось распарсить цену для {}: {}", p.symbol, e);
+                None
+            }
+        }
+    })
+    .collect();
+
+    Ok(unified)
+}
+
+pub async fn update_bybit_prices(pool: &PgPool, client: &Client) {
+    match fetch_bybit_prices(client).await {
+        Ok(prices) => {
+            if let Err(e) = db::insert_currency_prices_bulk(pool, &prices).await {
+                error!("Ошибка insert_prices_bulk: {}", e);
+            }
+        }
+        Err(e) => {
+            error!("Ошибка получения цен с Binance: {}", e);
+        }
+    }
+}
