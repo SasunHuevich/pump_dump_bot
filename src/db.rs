@@ -184,3 +184,13 @@ pub async fn insert_currency_prices_bulk(pool: &PgPool, list: &[UnifiedPrice]) -
     tx.commit().await?;
     Ok(())
 }
+
+pub async fn delete_old_currency_prices(pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "DELETE FROM currency_prices WHERE created_at < NOW() - INTERVAL '30 minutes'"
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
