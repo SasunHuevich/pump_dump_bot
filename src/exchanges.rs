@@ -16,7 +16,7 @@ pub struct BinancePrice {
 
 pub async fn fetch_binance_prices(client: &Client) -> Result<Vec<UnifiedPrice>, reqwest::Error> {
     let resp = client
-        .get("https://fapi.binance.com/fapi/v1/ticker/price")
+        .get("https://fapi.binance.com/fapi/v2/ticker/price")
         .send()
         .await?
         .json::<Vec<BinancePrice>>()
@@ -75,7 +75,7 @@ struct BybitResult {
 
 pub async fn fetch_bybit_prices(client: &Client) -> Result<Vec<UnifiedPrice>, reqwest::Error> {
     let resp = client
-        .get("https://api.bybit.com/v5/market/tickers?category=inverse")
+        .get("https://api.bybit.com/v5/market/tickers?category=linear")
         .send()
         .await?
         .json::<BybitResponse>()

@@ -41,7 +41,7 @@ pub async fn handle_add_user_button(pool: &PgPool, bot: Bot, msg: Message, user_
                 };
 
                 let subscription_end_date = match NaiveDate::parse_from_str(parts[1], "%Y-%m-%d") {
-                    Ok(d) => Some(d),
+                    Ok(date) => Some(date),
                     Err(_) => {
                         bot.send_message(msg.chat.id, "Некорректная дата, формат должен быть YYYY-MM-DD.")
                         .await?;
