@@ -16,11 +16,14 @@ mod exchanges;
 async fn main() {
     dotenv::dotenv().ok();
 
-    let bot = Bot::from_env();
+    let bot = Arc::new(Bot::from_env());
     let db_pool = Arc::new(db::init_db().await);
+    let MAX_INTRVAL_MINUTES: i32 = 30;
 
     {
         let db_pool = Arc::clone(&db_pool);
+        let bot = Arc::clone(&bot);
+
         tokio::spawn(async move {
             let client = Client::new();
 
@@ -29,7 +32,11 @@ async fn main() {
                 exchanges::update_bybit_prices(&db_pool, &client).await;
                 exchanges::update_bingx_prices(&db_pool, &client).await;
 
+                misc::process_notifications(&db_pool, &bot, MAX_INTRVAL_MINUTES);
+
                 db::delete_old_currency_prices(&db_pool).await;
+                db::delete_old_user_notifications(&db_pool).await;
+                
                 tokio::time::sleep(std::time::Duration::from_secs(60)).await;
             }
         });

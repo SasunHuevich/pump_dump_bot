@@ -3,6 +3,8 @@ use std::env;
 use dotenv::dotenv;
 use serde::{Serialize, Deserialize};
 use chrono::NaiveDate;
+use sqlx::Row;
+use chrono::NaiveDateTime;
 
 pub async fn init_db() -> PgPool {
     dotenv().ok();
@@ -194,3 +196,126 @@ pub async fn delete_old_currency_prices(pool: &PgPool) -> Result<(), sqlx::Error
 
     Ok(())
 }
+
+#[derive(sqlx::FromRow)]
+pub struct PriceRow {
+    pub currency: String,
+    pub price: f64,
+    pub exchange: String,
+    pub created_at: NaiveDateTime,
+}
+
+pub async fn get_prices_sort_created(
+    pool: &PgPool,
+    max_interval_minutes: i32,
+) -> Result<Vec<PriceRow>, sqlx::Error> {
+    let rows = sqlx::query_as::<_, PriceRow>(
+        "SELECT currency, price, exchange, created_at
+         FROM currency_prices
+         WHERE created_at >= NOW() - INTERVAL '$1 minutes'
+         ORDER BY created_at ASC"
+    )
+    .bind(max_interval_minutes)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows)
+}
+
+#[derive(sqlx::FromRow)]
+pub struct UserSettings {
+    pub user_id: i64,
+
+    pub binance: bool,
+    pub bybit: bool,
+    pub bingx: bool,
+
+    pub long_percent: f64,
+    pub long_minutes: i32,
+
+    pub short_percent: f64,
+    pub short_minutes: i32,
+
+    pub drop_percent: f64,
+    pub drop_minutes: i32,
+}
+
+pub async fn get_user_settings(pool: &PgPool) -> Result<Vec<UserSettings>, sqlx::Error> {
+    sqlx::query_as::<_, UserSettings>(
+        "
+        SELECT 
+            user_id,
+            binance,
+            bybit,
+            bingx,
+            long_percent,
+            long_minutes,
+            short_percent,
+            short_minutes,
+            drop_percent,
+            drop_minutes
+        FROM user_settings
+        "
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn insert_notification(
+    pool: &PgPool,
+    user_id: i64,
+    currency: &str,
+    notification_type: &str,
+) ->Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO user_notifications (user_id, currency, notification_type)
+        VALUES ($1, $2, $3)"
+    )
+    .bind(user_id)
+    .bind(currency)
+    .bind(notification_type)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+
+pub async fn count_notifications_for_user(
+    pool: &PgPool,
+    user_id: i64,
+    currency: &str,
+    notif_type: &str
+) -> Result<i32, sqlx::Error> {
+    let row = sqlx::query(
+        "
+        SELECT COUNT(*) AS count
+        FROM user_notifications
+        WHERE user_id = $1
+          AND currency = $2
+          AND notification_type = $3
+          AND created_at >= NOW() - INTERVAL '24 hours'
+        "
+    )
+    .bind(user_id)
+    .bind(currency)
+    .bind(notif_type)
+    .fetch_one(pool)
+    .await?;
+
+    let count: i32 = row.try_get("count")?;
+
+    Ok(count)
+}
+
+pub async fn delete_old_user_notifications(pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "DELETE FROM user_notifications WHERE created_at < NOW() - INTERVAL '24 hours'"
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+// TODO: все функции в этом файле наверное тоже как-то логировать надо
