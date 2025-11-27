@@ -6,7 +6,7 @@ use crate::db;
 use crate::misc;
 use crate::db::{UserState, UserRole, EnableExchanges};
 
-pub async fn handle_choosing_exchange_menu(pool: &PgPool, bot: Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
+pub async fn handle_choosing_exchange_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
     if let Some(text) = msg.text() {
     let exchanges = [("Binance", "binance"), ("Bybit", "bybit"), ("Bingx", "bingx")];
     let mut matched = false;

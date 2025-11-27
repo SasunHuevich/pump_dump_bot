@@ -7,7 +7,7 @@ use crate::db;
 use crate::misc;
 use crate::db::{UserState, UserRole};
 
-pub async fn handle_add_user_button(pool: &PgPool, bot: Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
+pub async fn handle_add_user_button(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
    if let Some(text) = msg.text() {
         match text {
             "✖️ Назад" => {

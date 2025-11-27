@@ -32,7 +32,7 @@ async fn main() {
                 exchanges::update_bybit_prices(&db_pool, &client).await;
                 exchanges::update_bingx_prices(&db_pool, &client).await;
 
-                misc::process_notifications(&db_pool, &bot, MAX_INTRVAL_MINUTES);
+                misc::process_notifications(&db_pool, &*bot, MAX_INTRVAL_MINUTES).await;
 
                 db::delete_old_currency_prices(&db_pool).await;
                 db::delete_old_user_notifications(&db_pool).await;
@@ -44,9 +44,10 @@ async fn main() {
 
     teloxide::repl(bot, {
         let db_pool = Arc::clone(&db_pool);
-        move |bot: Bot, msg: Message| {
+
+        move |bot: Arc<Bot>, msg: Message| {
             let db_pool = Arc::clone(&db_pool);
-            async move { handlers::handle_message(&db_pool, bot, msg).await }
+            async move { handlers::handle_message(&db_pool, &*bot, msg).await }
         }
     })
     .await;

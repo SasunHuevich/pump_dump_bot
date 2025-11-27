@@ -7,7 +7,7 @@ use crate::misc;
 use crate::db::{UserState, UserRole};
 use crate::texts::*;
 
-pub async fn handle_main_menu(pool: &PgPool, bot: Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
+pub async fn handle_main_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
     if let Some(text) = msg.text() {
         match text {
             "/start" => {

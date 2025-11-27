@@ -8,7 +8,7 @@ use crate::texts::*;
 use crate::misc;
 use crate::handlers_ext::{main_menu, add_user_menu, add_user_button, add_admin_button, delete_user_button, choosing_exchange_menu};
 
-pub async fn handle_message(pool: &PgPool, bot: Bot, msg: Message)  -> ResponseResult<()>{
+pub async fn handle_message(pool: &PgPool, bot: &Bot, msg: Message)  -> ResponseResult<()>{
     let user_id = msg.from.as_ref().map(|u| u.id.0 as i64).unwrap();
 
     let user_role = match db::get_user_role(pool, user_id).await {
