@@ -14,13 +14,13 @@ CREATE TABLE user_settings (
     bybit BOOLEAN DEFAULT FALSE,
     bingx BOOLEAN DEFAULT FALSE,
     
-    long_percent NUMERIC(5,2) DEFAULT 3.0,
+    long_percent DOUBLE PRECISION DEFAULT 3.0,
     long_minutes INT DEFAULT 5,
 
-    short_percent NUMERIC(5,2) DEFAULT 7.0,
+    short_percent DOUBLE PRECISION DEFAULT 7.0,
     short_minutes INT DEFAULT 20,
 
-    drop_percent NUMERIC(5,2) DEFAULT -7.0,
+    drop_percent DOUBLE PRECISION DEFAULT -7.0,
     drop_minutes INT DEFAULT 20
 );
 
@@ -29,7 +29,7 @@ CREATE INDEX idx_user_settings_user ON user_settings (user_id);
 CREATE TABLE currency_prices (
     id BIGSERIAL PRIMARY KEY,
     currency VARCHAR(50) NOT NULL,
-    price NUMERIC(18,8) NOT NULL,
+    price DOUBLE PRECISION NOT NULL,
     exchange VARCHAR(50) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );

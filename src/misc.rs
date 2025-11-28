@@ -4,6 +4,8 @@ use log::{info, warn, error};
 use teloxide::prelude::*;
 use std::collections::HashMap;
 use teloxide::types::ChatId;
+//use bigdecimal::BigDecimal;
+//use num_traits::ToPrimitive;
 
 
 use crate::db::{UserRole, PriceRow, UserSettings};
@@ -187,13 +189,8 @@ pub async fn process_notifications(pool: &PgPool, bot: &Bot, max_interval_minute
 
     let prices_map = get_grouped_prices(rows);
 
-    info!("prices_map (полное содержимое):");
-    for (ticker, prices) in &prices_map {
-        info!("  {:?} => {:?}", ticker, prices);
-    }
-
     let interval_percent_map = compute_all_procent_for_intevals(&prices_map, max_interval_minutes);
-
+    // TODO: здесь почему-то пустые вектора
 
     info!("interval_percent_map (полное содержимое):");
     for (interval, ticker_map) in &interval_percent_map {
