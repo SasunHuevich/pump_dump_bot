@@ -187,8 +187,18 @@ pub async fn process_notifications(pool: &PgPool, bot: &Bot, max_interval_minute
 
     let prices_map = get_grouped_prices(rows);
 
+    info!("prices_map (полное содержимое):");
+    for (ticker, prices) in &prices_map {
+        info!("  {:?} => {:?}", ticker, prices);
+    }
+
     let interval_percent_map = compute_all_procent_for_intevals(&prices_map, max_interval_minutes);
 
+
+    info!("interval_percent_map (полное содержимое):");
+    for (interval, ticker_map) in &interval_percent_map {
+        info!("  interval {}:", interval);
+    }
 
     let users = match db::get_user_settings(pool).await {
         Ok(u) => u,

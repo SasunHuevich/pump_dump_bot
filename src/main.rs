@@ -15,10 +15,15 @@ mod exchanges;
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
+    env_logger::Builder::from_env(env_logger::Env::default())
+    .format_target(false)
+    .format_timestamp_secs()
+    .init();
 
     let bot = Arc::new(Bot::from_env());
     let db_pool = Arc::new(db::init_db().await);
     let MAX_INTRVAL_MINUTES: i32 = 30;
+    info!("MAIN");
 
     {
         let db_pool = Arc::clone(&db_pool);
