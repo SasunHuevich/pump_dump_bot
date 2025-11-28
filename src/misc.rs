@@ -4,9 +4,6 @@ use log::{info, warn, error};
 use teloxide::prelude::*;
 use std::collections::HashMap;
 use teloxide::types::ChatId;
-//use bigdecimal::BigDecimal;
-//use num_traits::ToPrimitive;
-
 
 use crate::db::{UserRole, PriceRow, UserSettings};
 use crate::buttons;
@@ -23,12 +20,17 @@ pub fn get_main_menu_by_role(user_role: &UserRole) -> KeyboardMarkup {
 pub fn get_grouped_prices(rows: Vec<PriceRow>) -> HashMap<(String, String), Vec<f64>> {
     let mut prices_map: HashMap<(String, String), Vec<f64>> = HashMap::new();
 
-    for row in rows {
-        let key = (row.currency, row.exchange);
+    info!("Входящий вектор rows, длина = {}", rows.len());
 
-       prices_map.entry(key)
-        .or_default()
-        .push(row.price);
+    for row in rows {
+        let key = (
+            row.currency.trim().to_string(), 
+            row.exchange.trim().to_string()
+        );
+
+        let vec_ref = prices_map.entry(key.clone()).or_default();
+        
+        vec_ref.push(row.price);
     }
 
     prices_map
@@ -42,17 +44,24 @@ struct PriceChange {
 }
 
 pub fn compute_all_procent_for_intevals(prices_map: &HashMap<(String, String), Vec<f64>>, max_interval_minutes: i32) -> HashMap<i32, Vec<PriceChange>> {
+    info!("compute_all_procent");
     let mut interval_percent_map: HashMap<i32, Vec<PriceChange>> = HashMap::new();
 
     for interval_minutes in 1..=max_interval_minutes {
         let mut changes = Vec::new();
 
         for ((currency, exchange), prices) in prices_map {
-            let actual_interval = prices.len().min(interval_minutes as usize);
-
-            if actual_interval < 2 {
+            if prices.len() < 2 {
+                warn!(
+                    "Недостаточно данных для вычисления изменения цены: currency={} exchange={} data_points={}",
+                    currency,
+                    exchange,
+                    prices.len()
+                );
                 continue;
             }
+
+            let actual_interval = prices.len().min(interval_minutes as usize);
 
             let start_price = prices[prices.len() - actual_interval as usize];
             let end_price = prices[prices.len() - 1];
@@ -122,8 +131,8 @@ pub async fn check_interval_for_user(
     threshold_percent: f64,
     notification_type: &str,
     interval_percent_map: &HashMap<i32, Vec<PriceChange>>
-) {
-    let Some(changes) = interval_percent_map.get(&interval) else { return; };
+) -> bool {
+    let Some(changes) = interval_percent_map.get(&interval) else { return false; };
 
     for change in changes {
         if !exchange_allowed(&user, &change.exchange) {
@@ -166,8 +175,8 @@ pub async fn check_interval_for_user(
             interval,
             change.currency.to_uppercase(),
             match notification_type {
-                "drop" => "📉Падение",
-                "short" => "📉Падение", // TODO: а точно ли шорт это падение?
+                "drop" => "🔻Падение",
+                "short" => "🔺Памп",
                 _ => "📈Рост",
             },
             change.change_percent,
@@ -175,7 +184,11 @@ pub async fn check_interval_for_user(
         );
 
         send_tg_message(&bot, user.user_id, &msg).await;
+
+        return true;
     }
+    
+    false
 }
 
 pub async fn process_notifications(pool: &PgPool, bot: &Bot, max_interval_minutes: i32) {
@@ -190,12 +203,6 @@ pub async fn process_notifications(pool: &PgPool, bot: &Bot, max_interval_minute
     let prices_map = get_grouped_prices(rows);
 
     let interval_percent_map = compute_all_procent_for_intevals(&prices_map, max_interval_minutes);
-    // TODO: здесь почему-то пустые вектора
-
-    info!("interval_percent_map (полное содержимое):");
-    for (interval, ticker_map) in &interval_percent_map {
-        info!("  interval {}:", interval);
-    }
 
     let users = match db::get_user_settings(pool).await {
         Ok(u) => u,
@@ -206,9 +213,16 @@ pub async fn process_notifications(pool: &PgPool, bot: &Bot, max_interval_minute
     };
 
     for user in users {
+        if let Some(end_date) = user.subscription_end_date {
+            let now = chrono::Utc::now().naive_utc();
+            if now > end_date {
+                continue;
+            }
+        }
+
         // ------------------ LONG ------------------
         for interval in 1..=user.long_minutes {
-            check_interval_for_user(
+            if check_interval_for_user(
                 pool,
                 bot,
                 &user,
@@ -216,12 +230,14 @@ pub async fn process_notifications(pool: &PgPool, bot: &Bot, max_interval_minute
                 user.long_percent,
                 "long",
                 &interval_percent_map,
-            ).await;
+            ).await {
+                break;
+            }
         }
 
         // ------------------ SHORT ------------------
         for interval in 1..=user.short_minutes {
-            check_interval_for_user(
+            if check_interval_for_user(
                 pool,
                 bot,
                 &user,
@@ -229,12 +245,14 @@ pub async fn process_notifications(pool: &PgPool, bot: &Bot, max_interval_minute
                 user.short_percent,
                 "short",
                 &interval_percent_map,
-            ).await;
+            ).await {
+                break;
+            }
         }
 
         // ------------------ DROP ------------------
         for interval in 1..=user.drop_minutes {
-            check_interval_for_user(
+            if check_interval_for_user(
                 pool,
                 bot,
                 &user,
@@ -242,7 +260,9 @@ pub async fn process_notifications(pool: &PgPool, bot: &Bot, max_interval_minute
                 user.drop_percent,
                 "drop",
                 &interval_percent_map,
-            ).await;
+            ).await {
+                break;
+            }
         }
     }
 }

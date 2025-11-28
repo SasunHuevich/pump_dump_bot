@@ -214,7 +214,7 @@ pub async fn get_prices_sort_created(
     let rows = sqlx::query_as::<_, PriceRow>(
         "SELECT currency, price, exchange, created_at
          FROM currency_prices
-         WHERE created_at >= NOW() - INTERVAL '$1 minutes'
+         WHERE created_at >= NOW() -  ($1 * INTERVAL '1 minute')
          ORDER BY created_at ASC"
     )
     .bind(max_interval_minutes)
@@ -240,23 +240,27 @@ pub struct UserSettings {
 
     pub drop_percent: f64,
     pub drop_minutes: i32,
+
+    pub subscription_end_date: Option<chrono::NaiveDateTime>,
 }
 
 pub async fn get_user_settings(pool: &PgPool) -> Result<Vec<UserSettings>, sqlx::Error> {
     sqlx::query_as::<_, UserSettings>(
         "
         SELECT 
-            user_id,
-            binance,
-            bybit,
-            bingx,
-            long_percent,
-            long_minutes,
-            short_percent,
-            short_minutes,
-            drop_percent,
-            drop_minutes
-        FROM user_settings
+            us.user_id,
+            us.binance,
+            us.bybit,
+            us.bingx,
+            us.long_percent,
+            us.long_minutes,
+            us.short_percent,
+            us.short_minutes,
+            us.drop_percent,
+            us.drop_minutes,
+            u.subscription_end_date
+        FROM user_settings us
+        LEFT JOIN users u ON u.user_id = us.user_id
         "
     )
     .fetch_all(pool)
@@ -271,7 +275,7 @@ pub async fn insert_notification(
 ) ->Result<(), sqlx::Error> {
     sqlx::query(
         "INSERT INTO user_notifications (user_id, currency, notification_type)
-        VALUES ($1, $2, $3)"
+        VALUES ($1, $2, $3::notification_enum)"
     )
     .bind(user_id)
     .bind(currency)
@@ -288,14 +292,14 @@ pub async fn count_notifications_for_user(
     user_id: i64,
     currency: &str,
     notif_type: &str
-) -> Result<i32, sqlx::Error> {
+) -> Result<i64, sqlx::Error> {
     let row = sqlx::query(
         "
         SELECT COUNT(*) AS count
         FROM user_notifications
         WHERE user_id = $1
           AND currency = $2
-          AND notification_type = $3
+          AND notification_type = $3::notification_enum
           AND created_at >= NOW() - INTERVAL '24 hours'
         "
     )
@@ -305,7 +309,7 @@ pub async fn count_notifications_for_user(
     .fetch_one(pool)
     .await?;
 
-    let count: i32 = row.try_get("count")?;
+    let count: i64 = row.try_get("count")?;
 
     Ok(count)
 }

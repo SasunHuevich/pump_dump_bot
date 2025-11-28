@@ -15,6 +15,7 @@ services:
 
   bot:
     build: .
+    # restart: always
     container_name: pump_dump_bot
     depends_on:
       - db

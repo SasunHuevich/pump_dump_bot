@@ -71,6 +71,6 @@ INSERT INTO users (user_id, username, role)
 VALUES (277739613, 'Petrov', 'admin')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO user_settings (user_id)
-VALUES (277739613)
+INSERT INTO user_settings (user_id, long_percent, long_minutes)
+VALUES (277739613, 1, 1)
 ON CONFLICT DO NOTHING;
