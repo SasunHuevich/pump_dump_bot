@@ -43,7 +43,36 @@ pub async fn handle_main_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i
             }
 
             "⚒️ Настроить" => {
-                bot.send_message(msg.chat.id, format!("Затычка: ⚒️ Настроить")).await?;
+                if let Err(e) = db::set_user_state(pool, user_id, &UserState::ChoosingParametersMenu).await {
+                    bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?;
+                    //TODO: ретурн
+                }
+
+                let user_settings = match db::get_user_settings_by_id(pool, user_id).await {
+                    Ok(settings) => settings,
+                    Err(e) => {
+                        bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?;
+                        return Ok(());
+                    }
+                };
+
+                let message = format!(
+                    "*Текущие настройки:*\n\n\
+                    📈 *Лонг:* {}% за {} мин.\n\
+                    🔺 *Шорт:* {}% за {} мин.\n\
+                    🔻 *Падение:* {}% за {} мин.",
+                    user_settings.long_percent,
+                    user_settings.long_minutes,
+                    user_settings.short_percent,
+                    user_settings.short_minutes,
+                    user_settings.drop_percent,
+                    user_settings.drop_minutes
+                );
+
+                // TODO: во всех местах гед смена состояния если что-то пошло не так надо бы вернуть обратно
+                bot.send_message(msg.chat.id, message)
+                .reply_markup(buttons::parameters_menu())
+                .await?;
             }
 
             "🔐 Получить доступ" => {

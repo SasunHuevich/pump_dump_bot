@@ -71,3 +71,36 @@ pub fn exchange_menu(user_id: i64, enable_exchanges: db::EnableExchanges) -> Key
     ])
     .resize_keyboard()
 }
+
+pub fn parameters_menu() -> KeyboardMarkup{
+    KeyboardMarkup::new(vec![
+        vec![
+            KeyboardButton::new(
+                format!("📈 Период лонг")
+            ),
+            KeyboardButton::new(
+                format!("% лонга")
+            ),
+        ],
+        vec![
+            KeyboardButton::new(
+                format!("🔺 Период памп")
+            ),
+            KeyboardButton::new(
+                format!("% пампа")
+            ),
+        ],
+        vec![
+            KeyboardButton::new(
+                format!("🔻 Период падение")
+            ),
+            KeyboardButton::new(
+                format!("% падения")
+            ),
+        ],
+        vec![
+            KeyboardButton::new("✖️ Назад"),
+        ],
+    ])
+    .resize_keyboard()
+}

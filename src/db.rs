@@ -1,11 +1,9 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, Row, Postgres, Type, Encode};
 use std::env;
 use dotenv::dotenv;
 use serde::{Serialize, Deserialize};
 use chrono::NaiveDate;
-use sqlx::Row;
 use chrono::NaiveDateTime;
-//use bigdecimal::BigDecimal;
 
 
 pub async fn init_db() -> PgPool {
@@ -47,6 +45,27 @@ pub enum UserState {
 
     #[sqlx(rename = "choosing_exchange_menu")]
     ChoosingExchangeMenu,
+
+    #[sqlx(rename = "choosing_parameters_menu")]
+    ChoosingParametersMenu,
+
+    #[sqlx(rename = "long_period_button")]
+    LongPeriodButton,
+
+    #[sqlx(rename = "long_percent_button")]
+    LongPercentButton,
+
+    #[sqlx(rename = "short_period_button")]
+    ShortPeriodButton,
+
+    #[sqlx(rename = "short_percent_button")]
+    ShortPercentButton,
+
+    #[sqlx(rename = "drop_period_button")]
+    DropPeriodButton,
+
+    #[sqlx(rename = "drop_percent_button")]
+    DropPercentButton,
 }
 
 
@@ -321,6 +340,50 @@ pub async fn delete_old_user_notifications(pool: &PgPool) -> Result<(), sqlx::Er
     .execute(pool)
     .await?;
 
+    Ok(())
+}
+
+
+pub async fn get_user_settings_by_id(pool: &PgPool, user_id: i64) -> Result<UserSettings, sqlx::Error> {
+    sqlx::query_as::<_, UserSettings>(
+        "
+        SELECT 
+            us.user_id,
+            us.binance,
+            us.bybit,
+            us.bingx,
+            us.long_percent,
+            us.long_minutes,
+            us.short_percent,
+            us.short_minutes,
+            us.drop_percent,
+            us.drop_minutes,
+            u.subscription_end_date
+        FROM user_settings us
+        LEFT JOIN users u ON u.user_id = us.user_id
+        WHERE us.user_id = $1
+        "
+    )
+    .bind(user_id)
+    .fetch_one(pool)
+    .await
+}
+
+pub async fn update_user_setting<T>(
+    pool: &PgPool,
+    user_id: i64,
+    field_name: &str,
+    value: T,
+) -> Result<(), sqlx::Error>
+where
+    T: for<'a> Encode<'a, Postgres> + Type<Postgres> + Send + Sync,
+{
+    let query = format!("UPDATE user_settings SET {} = $1 WHERE user_id = $2", field_name);
+    sqlx::query(&query)
+        .bind(value)
+        .bind(user_id)
+        .execute(pool)
+        .await?;
     Ok(())
 }
 

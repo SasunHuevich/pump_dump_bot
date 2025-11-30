@@ -6,7 +6,7 @@ use crate::db;
 use crate::db::{UserRole, UserState};
 use crate::texts::*;
 use crate::misc;
-use crate::handlers_ext::{main_menu, add_user_menu, add_user_button, add_admin_button, delete_user_button, choosing_exchange_menu};
+use crate::handlers_ext::*;
 
 pub async fn handle_message(pool: &PgPool, bot: &Bot, msg: Message)  -> ResponseResult<()>{
     let user_id = msg.from.as_ref().map(|u| u.id.0 as i64).unwrap();
@@ -40,15 +40,12 @@ pub async fn handle_message(pool: &PgPool, bot: &Bot, msg: Message)  -> Response
         UserState::MainMenu => {
             main_menu::handle_main_menu(pool, bot, msg, user_id, user_role).await?;
         }
-
         UserState::AddUserMenu => {
             add_user_menu::handle_add_user_menu(pool, bot, msg, user_id, user_role).await?;
         }
-
         UserState::AddUserButton => {
             add_user_button::handle_add_user_button(pool, bot, msg, user_id, user_role).await?;
         }
-
         UserState::AddAdminButton => {
             add_admin_button::handle_add_admin_button(pool, bot, msg, user_id, user_role).await?;
         }
@@ -57,6 +54,27 @@ pub async fn handle_message(pool: &PgPool, bot: &Bot, msg: Message)  -> Response
         }
         UserState::ChoosingExchangeMenu => {
             choosing_exchange_menu::handle_choosing_exchange_menu(pool, bot, msg, user_id, user_role).await?;
+        }
+        UserState::ChoosingParametersMenu => {
+            choosing_parameters_menu::handle_choosing_parameters_menu(pool, bot, msg, user_id, user_role).await?;
+        }
+        UserState::LongPeriodButton => {
+            choosing_parameters_buttons::period_long_button::handle(pool, bot, msg, user_id, user_role).await?;
+        }
+        UserState::LongPercentButton => {
+            choosing_parameters_buttons::percent_long_button::handle(pool, bot, msg, user_id, user_role).await?;
+        }
+        UserState::ShortPeriodButton => {
+            choosing_parameters_buttons::period_short_button::handle(pool, bot, msg, user_id, user_role).await?;
+        }
+        UserState::ShortPercentButton => {
+            choosing_parameters_buttons::percent_short_button::handle(pool, bot, msg, user_id, user_role).await?;
+        }
+        UserState::DropPeriodButton => {
+            choosing_parameters_buttons::period_drop_button::handle(pool, bot, msg, user_id, user_role).await?;
+        }
+        UserState::DropPercentButton => {
+            choosing_parameters_buttons::percent_drop_button::handle(pool, bot, msg, user_id, user_role).await?;
         }
     }
     

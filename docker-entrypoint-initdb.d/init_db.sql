@@ -59,7 +59,14 @@ CREATE TYPE user_state AS ENUM (
     'add_user_button', 
     'add_admin_button', 
     'delete_user_button',
-    'choosing_exchange_menu'
+    'choosing_exchange_menu',
+    'choosing_parameters_menu',
+    'long_period_button',
+    'long_percent_button',
+    'short_period_button',
+    'short_percent_button',
+    'drop_period_button',
+    'drop_percent_button'
     );
 
 CREATE TABLE user_states (
