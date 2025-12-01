@@ -1,11 +1,20 @@
-FROM python:3.13-slim
+FROM rust:1.91-bullseye AS builder
 
-WORKDIR /pump_dump_bot
+# Устанавливаем зависимости для сборки с OpenSSL
+RUN apt-get update && apt-get install -y libssl-dev pkg-config ca-certificates && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt
-
+WORKDIR /usr/src/app
 COPY . .
 
-CMD ["sh", "-c", "python3 birga.py & python3 bybit.py & python3 run_binance.py & tail -f /dev/null"]
+RUN cargo build --release
+
+# Минимальный образ для запуска
+FROM debian:bullseye-slim
+
+# Устанавливаем runtime зависимости
+RUN apt-get update && apt-get install -y libssl1.1 ca-certificates && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/app
+COPY --from=builder /usr/src/app/target/release/pump_dump_bot .
+
+CMD ["./pump_dump_bot"]

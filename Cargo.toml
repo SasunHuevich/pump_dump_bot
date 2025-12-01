@@ -1,0 +1,16 @@
+[package]
+name = "pump_dump_bot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio= {version = "1", features = ["full"]}
+teloxide = "0.17"
+sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio-native-tls", "macros", "chrono"] }
+dotenv = "0.15"
+serde = { version = "1.0.145", features = ["derive"] }
+serde_json = "1.0.145"
+chrono = "0.4.42"
+reqwest = { version = "0.12.24", features = ["json", "rustls-tls"] }
+log = "0.4.28"
+env_logger = "0.11.8"
