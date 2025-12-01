@@ -6,19 +6,11 @@ use crate::db;
 use crate::misc;
 use crate::db::{UserState, UserRole};
 use crate::texts::*;
+use crate::handlers_ext::choosing_parameters_buttons::misc::back_to_choosing_parameters_menu;
 
 pub async fn handle_main_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
     if let Some(text) = msg.text() {
         match text {
-            "/start" => {
-                let menu = misc::get_main_menu_by_role(&user_role);
-
-                bot.send_message(msg.chat.id, START_MESSAGE)
-                .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-                .reply_markup(menu)
-                .await?;
-            }
-
             "🏦 Выбор биржи" => {
                 if let Err(e) = db::set_user_state(pool, user_id, &UserState::ChoosingExchangeMenu).await {
                     bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?;
@@ -43,44 +35,42 @@ pub async fn handle_main_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i
             }
 
             "⚒️ Настроить" => {
-                if let Err(e) = db::set_user_state(pool, user_id, &UserState::ChoosingParametersMenu).await {
-                    bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?;
-                    //TODO: ретурн
-                }
+                back_to_choosing_parameters_menu(bot, pool, msg.chat.id, user_id).await?;
+            }
 
-                let user_settings = match db::get_user_settings_by_id(pool, user_id).await {
-                    Ok(settings) => settings,
-                    Err(e) => {
-                        bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?;
-                        return Ok(());
+            "🔐 Проверить доступ" => {
+                match db::get_subscription_end_date(pool, user_id).await {
+                    Ok(Some(date)) => {
+                        let today = chrono::Local::now().naive_local().date();
+
+                        let status = if date >= today {
+                            format!("✅ Активна до {}.", date.format("%d-%m-%Y"))
+                        } else {
+                            format!("❌ Неактивна с {}.", date.format("%d-%m-%Y"))
+                        };
+
+                        let message = format!(
+                            "👤 Профиль пользователя: {}\n🔐 Статус подписки:\n{}.",
+                            user_id,
+                            status
+                        );
+
+                        bot.send_message(msg.chat.id, &message).await?;
                     }
-                };
 
-                let message = format!(
-                    "*Текущие настройки:*\n\n\
-                    📈 *Лонг:* {}% за {} мин.\n\
-                    🔺 *Шорт:* {}% за {} мин.\n\
-                    🔻 *Падение:* {}% за {} мин.",
-                    user_settings.long_percent,
-                    user_settings.long_minutes,
-                    user_settings.short_percent,
-                    user_settings.short_minutes,
-                    user_settings.drop_percent,
-                    user_settings.drop_minutes
-                );
+                    Ok(None) => {
+                        let message = format!(
+                            "👤 Профиль пользователя: {}\n🔐 Статус подписки:\n❌ Не активна",
+                            user_id
+                        );
+                        
+                        bot.send_message(msg.chat.id, &message).await?;
+                    }
 
-                // TODO: во всех местах гед смена состояния если что-то пошло не так надо бы вернуть обратно
-                bot.send_message(msg.chat.id, message)
-                .reply_markup(buttons::parameters_menu())
-                .await?;
-            }
-
-            "🔐 Получить доступ" => {
-                bot.send_message(msg.chat.id, format!("Затычка: 🔐 Получить доступ")).await?;
-            }
-
-            "💬 Поддержка" => {
-                bot.send_message(msg.chat.id, format!("Затычка: 💬 Поддержка")).await?;
+                    Err(e) => {
+                        bot.send_message(msg.chat.id, format!("Ошибка чтения подписки: {}", e)).await?;
+                    }
+                }
             }
 
             "👥 Управление пользователями" => {

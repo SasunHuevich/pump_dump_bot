@@ -10,8 +10,7 @@ pub fn main_menu() -> KeyboardMarkup {
             KeyboardButton::new("⚒️ Настроить"),
         ],
         vec![
-            KeyboardButton::new("🔐 Получить доступ"),
-            KeyboardButton::new("💬 Поддержка"),
+            KeyboardButton::new("🔐 Проверить доступ"),
         ],
     ])
     .resize_keyboard()

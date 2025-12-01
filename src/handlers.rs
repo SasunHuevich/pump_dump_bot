@@ -36,6 +36,23 @@ pub async fn handle_message(pool: &PgPool, bot: &Bot, msg: Message)  -> Response
         }
     };
 
+    if let Some(text) = msg.text() {
+        if text == "/start" {
+            let menu = misc::get_main_menu_by_role(&user_role);
+
+            if let Err(e) = db::set_user_state(pool, user_id, &UserState::MainMenu).await {
+                bot.send_message(msg.chat.id, format!("Ошибка БД: {}", e)).await?;
+            }
+
+            bot.send_message(msg.chat.id, START_MESSAGE)
+            .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+            .reply_markup(menu)
+            .await?;
+
+            return Ok(());
+        }
+    }
+
     match state {
         UserState::MainMenu => {
             main_menu::handle_main_menu(pool, bot, msg, user_id, user_role).await?;

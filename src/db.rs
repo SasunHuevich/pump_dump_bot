@@ -387,4 +387,20 @@ where
     Ok(())
 }
 
+pub async fn get_subscription_end_date(pool: &PgPool, user_id: i64) -> Result<Option<chrono::NaiveDate>, sqlx::Error> {
+    let row = sqlx::query(
+        "SELECT subscription_end_date FROM users WHERE user_id = $1"
+    )
+    .bind(user_id)
+    .fetch_optional(pool).
+    await?;
+
+    if let Some(rec) = row {
+        let dt: Option<NaiveDateTime> = rec.try_get("subscription_end_date")?;
+        Ok(dt.map(|d| d.date()))
+    } else {
+        Ok(None)
+    }
+}
+
 // TODO: все функции в этом файле наверное тоже как-то логировать надо
