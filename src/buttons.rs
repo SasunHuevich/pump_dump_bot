@@ -1,7 +1,6 @@
 use teloxide::types::{KeyboardButton, KeyboardMarkup};
 
 use crate::db;
-use crate::db::{EnableExchanges};
 
 pub fn main_menu() -> KeyboardMarkup {
     KeyboardMarkup::new(vec![
@@ -51,7 +50,7 @@ pub fn back_menu() -> KeyboardMarkup {
     .resize_keyboard()
 }
 
-pub fn exchange_menu(user_id: i64, enable_exchanges: db::EnableExchanges) -> KeyboardMarkup{
+pub fn exchange_menu(enable_exchanges: db::EnableExchanges) -> KeyboardMarkup{
     KeyboardMarkup::new(vec![
         vec![
             KeyboardButton::new(

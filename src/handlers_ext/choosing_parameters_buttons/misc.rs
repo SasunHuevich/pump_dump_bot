@@ -1,10 +1,9 @@
 use teloxide::prelude::*;
 use sqlx::PgPool;
-use chrono::NaiveDate;
 
 use crate::buttons;
 use crate::db;
-use crate::db::{UserState, UserRole};
+use crate::db::{UserState};
 
 pub async fn back_to_choosing_parameters_menu(
     bot: &Bot,

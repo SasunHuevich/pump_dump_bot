@@ -2,7 +2,7 @@ use teloxide::prelude::*;
 use std::sync::Arc;
 use tokio;
 use reqwest::Client;
-use log::{info, warn, error};
+use log::{info, error};
 
 mod handlers;
 mod buttons;
@@ -22,7 +22,7 @@ async fn main() {
 
     let bot = Arc::new(Bot::from_env());
     let db_pool = Arc::new(db::init_db().await);
-    let MAX_INTRVAL_MINUTES: i32 = 30;
+    let max_interval_minutes: i32 = 30;
     info!("MAIN");
 
     {
@@ -37,10 +37,14 @@ async fn main() {
                 exchanges::update_bybit_prices(&db_pool, &client).await;
                 exchanges::update_bingx_prices(&db_pool, &client).await;
 
-                misc::process_notifications(&db_pool, &*bot, MAX_INTRVAL_MINUTES).await;
+                misc::process_notifications(&db_pool, &*bot, max_interval_minutes).await;
 
-                db::delete_old_currency_prices(&db_pool).await;
-                db::delete_old_user_notifications(&db_pool).await;
+                if let Err(e) = db::delete_old_currency_prices(&db_pool).await {
+                    error!("Failed to delete old currency prices: {}", e);
+                }
+                if let Err(e) = db::delete_old_user_notifications(&db_pool).await {
+                    error!("Failed to delete old user notifications: {}", e);
+                }
                 
                 tokio::time::sleep(std::time::Duration::from_secs(60)).await;
             }

@@ -3,12 +3,10 @@ use sqlx::PgPool;
 
 use crate::buttons;
 use crate::db;
-use crate::misc;
 use crate::db::{UserState, UserRole};
-use crate::texts::*;
 use crate::handlers_ext::choosing_parameters_buttons::misc::back_to_choosing_parameters_menu;
 
-pub async fn handle_main_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
+pub async fn handle(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
     if let Some(text) = msg.text() {
         match text {
             "🏦 Выбор биржи" => {
@@ -24,7 +22,7 @@ pub async fn handle_main_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i
                     }
                 };
 
-                let menu = buttons::exchange_menu(user_id, enable_exchanges);
+                let menu = buttons::exchange_menu(enable_exchanges);
 
                 bot.send_message(
                     msg.chat.id,
@@ -44,9 +42,9 @@ pub async fn handle_main_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i
                         let today = chrono::Local::now().naive_local().date();
 
                         let status = if date >= today {
-                            format!("✅ Активна до {}.", date.format("%d-%m-%Y"))
+                            format!("✅ Активна до {}", date.format("%d-%m-%Y"))
                         } else {
-                            format!("❌ Неактивна с {}.", date.format("%d-%m-%Y"))
+                            format!("❌ Неактивна с {}", date.format("%d-%m-%Y"))
                         };
 
                         let message = format!(
@@ -89,7 +87,7 @@ pub async fn handle_main_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i
                 .await?;
             }
 
-            other => {
+            _ => {
                 bot.send_message(msg.chat.id, "Не понял команду 😕").await?;
             }
         }

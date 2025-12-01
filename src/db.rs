@@ -223,7 +223,6 @@ pub struct PriceRow {
     pub currency: String,
     pub price: f64,
     pub exchange: String,
-    pub created_at: NaiveDateTime,
 }
 
 pub async fn get_prices_sort_created(
@@ -231,7 +230,7 @@ pub async fn get_prices_sort_created(
     max_interval_minutes: i32,
 ) -> Result<Vec<PriceRow>, sqlx::Error> {
     let rows = sqlx::query_as::<_, PriceRow>(
-        "SELECT currency, price, exchange, created_at
+        "SELECT currency, price, exchange
          FROM currency_prices
          WHERE created_at >= NOW() -  ($1 * INTERVAL '1 minute')
          ORDER BY created_at ASC"

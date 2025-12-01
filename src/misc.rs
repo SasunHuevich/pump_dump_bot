@@ -43,7 +43,7 @@ struct PriceChange {
     change_percent: f64,
 }
 
-pub fn compute_all_procent_for_intevals(prices_map: &HashMap<(String, String), Vec<f64>>, max_interval_minutes: i32) -> HashMap<i32, Vec<PriceChange>> {
+fn compute_all_procent_for_intevals(prices_map: &HashMap<(String, String), Vec<f64>>, max_interval_minutes: i32) -> HashMap<i32, Vec<PriceChange>> {
     info!("compute_all_procent");
     let mut interval_percent_map: HashMap<i32, Vec<PriceChange>> = HashMap::new();
 
@@ -123,7 +123,7 @@ pub async fn send_tg_message(bot: &Bot, user_id: i64, text: &str) { // TODO: Ð¾Ñ
     }
 }
 
-pub async fn check_interval_for_user(
+async fn check_interval_for_user(
     pool: &PgPool,
     bot: &Bot,
     user: &UserSettings,

@@ -4,9 +4,9 @@ use sqlx::PgPool;
 use crate::buttons;
 use crate::db;
 use crate::misc;
-use crate::db::{UserState, UserRole, EnableExchanges};
+use crate::db::{UserState, UserRole};
 
-pub async fn handle_choosing_exchange_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
+pub async fn handle(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
     if let Some(text) = msg.text() {
     let exchanges = [("Binance", "binance"), ("Bybit", "bybit"), ("Bingx", "bingx")];
     let mut matched = false;
@@ -28,7 +28,7 @@ pub async fn handle_choosing_exchange_menu(pool: &PgPool, bot: &Bot, msg: Messag
                 }
             };
 
-            let menu = buttons::exchange_menu(user_id, enable_exchanges);
+            let menu = buttons::exchange_menu(enable_exchanges);
 
             bot.send_message(
                 msg.chat.id,

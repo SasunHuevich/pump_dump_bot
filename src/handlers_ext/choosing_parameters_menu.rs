@@ -4,9 +4,9 @@ use sqlx::PgPool;
 use crate::buttons;
 use crate::db;
 use crate::misc;
-use crate::db::{UserState, UserRole, EnableExchanges};
+use crate::db::{UserState, UserRole};
 
-pub async fn handle_choosing_parameters_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
+pub async fn handle(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
     if let Some(text) = msg.text() {
         match text {
             "✖️ Назад" => {

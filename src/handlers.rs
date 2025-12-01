@@ -1,7 +1,6 @@
 use teloxide::prelude::*;
 use sqlx::PgPool;
 
-use crate::buttons;
 use crate::db;
 use crate::db::{UserRole, UserState};
 use crate::texts::*;
@@ -55,43 +54,43 @@ pub async fn handle_message(pool: &PgPool, bot: &Bot, msg: Message)  -> Response
 
     match state {
         UserState::MainMenu => {
-            main_menu::handle_main_menu(pool, bot, msg, user_id, user_role).await?;
+            main_menu::handle(pool, bot, msg, user_id, user_role).await?;
         }
         UserState::AddUserMenu => {
-            add_user_menu::handle_add_user_menu(pool, bot, msg, user_id, user_role).await?;
+            add_user_menu::handle(pool, bot, msg, user_id, user_role).await?;
         }
         UserState::AddUserButton => {
-            add_user_button::handle_add_user_button(pool, bot, msg, user_id, user_role).await?;
+            add_user_button::handle(pool, bot, msg, user_id).await?;
         }
         UserState::AddAdminButton => {
-            add_admin_button::handle_add_admin_button(pool, bot, msg, user_id, user_role).await?;
+            add_admin_button::handle(pool, bot, msg, user_id).await?;
         }
         UserState::DeleteUserButton => {
-            delete_user_button::handle_delete_user_button(pool, bot, msg, user_id, user_role).await?;
+            delete_user_button::handle(pool, bot, msg, user_id).await?;
         }
         UserState::ChoosingExchangeMenu => {
-            choosing_exchange_menu::handle_choosing_exchange_menu(pool, bot, msg, user_id, user_role).await?;
+            choosing_exchange_menu::handle(pool, bot, msg, user_id, user_role).await?;
         }
         UserState::ChoosingParametersMenu => {
-            choosing_parameters_menu::handle_choosing_parameters_menu(pool, bot, msg, user_id, user_role).await?;
+            choosing_parameters_menu::handle(pool, bot, msg, user_id, user_role).await?;
         }
         UserState::LongPeriodButton => {
-            choosing_parameters_buttons::period_long_button::handle(pool, bot, msg, user_id, user_role).await?;
+            choosing_parameters_buttons::period_long_button::handle(pool, bot, msg, user_id).await?;
         }
         UserState::LongPercentButton => {
-            choosing_parameters_buttons::percent_long_button::handle(pool, bot, msg, user_id, user_role).await?;
+            choosing_parameters_buttons::percent_long_button::handle(pool, bot, msg, user_id).await?;
         }
         UserState::ShortPeriodButton => {
-            choosing_parameters_buttons::period_short_button::handle(pool, bot, msg, user_id, user_role).await?;
+            choosing_parameters_buttons::period_short_button::handle(pool, bot, msg, user_id).await?;
         }
         UserState::ShortPercentButton => {
-            choosing_parameters_buttons::percent_short_button::handle(pool, bot, msg, user_id, user_role).await?;
+            choosing_parameters_buttons::percent_short_button::handle(pool, bot, msg, user_id).await?;
         }
         UserState::DropPeriodButton => {
-            choosing_parameters_buttons::period_drop_button::handle(pool, bot, msg, user_id, user_role).await?;
+            choosing_parameters_buttons::period_drop_button::handle(pool, bot, msg, user_id).await?;
         }
         UserState::DropPercentButton => {
-            choosing_parameters_buttons::percent_drop_button::handle(pool, bot, msg, user_id, user_role).await?;
+            choosing_parameters_buttons::percent_drop_button::handle(pool, bot, msg, user_id).await?;
         }
     }
     

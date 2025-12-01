@@ -1,7 +1,7 @@
 use reqwest::Client;
 use serde::Deserialize;
 use sqlx::PgPool;
-use log::{info, warn, error};
+use log::{warn, error};
 
 use crate::db;
 use crate::db::{UnifiedPrice};
@@ -60,7 +60,7 @@ pub async fn update_binance_prices(pool: &PgPool, client: &Client) {
 #[derive(Deserialize)]
 pub struct BybitPrice {
     pub symbol: String,
-    pub lastPrice: String,
+    pub last_price: String,
 }
 
 #[derive(Deserialize)]
@@ -84,10 +84,10 @@ pub async fn fetch_bybit_prices(client: &Client) -> Result<Vec<UnifiedPrice>, re
     let unified: Vec<UnifiedPrice> = resp.result.list
         .into_iter()
         .filter_map(|p| {
-        match p.lastPrice.parse::<f64>() {
-            Ok(lastPrice) => Some(UnifiedPrice {
+        match p.last_price.parse::<f64>() {
+            Ok(last_price) => Some(UnifiedPrice {
                 currency: p.symbol,
-                price: lastPrice,
+                price: last_price,
                 exchange: "bybit".to_string(),
                 timestamp: chrono::Utc::now().timestamp_millis(),
             }),

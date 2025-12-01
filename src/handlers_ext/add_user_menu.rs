@@ -6,7 +6,7 @@ use crate::db;
 use crate::misc;
 use crate::db::{UserState, UserRole};
 
-pub async fn handle_add_user_menu(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
+pub async fn handle(pool: &PgPool, bot: &Bot, msg: Message, user_id: i64, user_role: UserRole)  -> ResponseResult<()> {
     if let Some(text) = msg.text() {
         match text {
             "➕ Пользователь" => {
@@ -67,7 +67,7 @@ pub async fn handle_add_user_menu(pool: &PgPool, bot: &Bot, msg: Message, user_i
                 .await?;
             }
 
-            other => {
+            _ => {
                 bot.send_message(msg.chat.id, "Не понял команду 😕").await?;
             }
         }
