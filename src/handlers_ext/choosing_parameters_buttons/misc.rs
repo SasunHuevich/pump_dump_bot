@@ -28,7 +28,7 @@ pub async fn back_to_choosing_parameters_menu(
         "Текущие настройки:\n\n\
         📈 Лонг: {}% за {} мин.\n\
         🔺 Шорт: {}% за {} мин.\n\
-        🔻 Падение: {}% за {} мин.",
+        🔻 Падение: -{}% за {} мин.",
         user_settings.long_percent,
         user_settings.long_minutes,
         user_settings.short_percent,

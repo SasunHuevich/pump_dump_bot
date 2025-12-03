@@ -140,7 +140,7 @@ async fn check_interval_for_user(
         }
 
         if notification_type == "drop" {
-            if change.change_percent > threshold_percent {
+            if change.change_percent > -threshold_percent {
                 continue;
             }
         } else {
