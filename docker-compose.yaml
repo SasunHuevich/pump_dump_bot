@@ -20,13 +20,13 @@ services:
 
   bot:
     build: .
-    # restart: always
+    restart: always
     container_name: pump_dump_bot
     depends_on:
       - db
     environment:
       - DATABASE_URL=postgresql://user:pass@db:5432/bot_db
-      - TELOXIDE_TOKEN=6653096426:AAE5E-9_siiOKT9Pe66j_hXXkS0Js9FAPss
+      - TELOXIDE_TOKEN=5661104344:AAHAGcsZ3XmTaO6DXMuuv8DA-XtbMfUi_Ww
       - RUST_LOG=info
     logging:
       driver: "json-file"

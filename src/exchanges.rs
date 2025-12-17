@@ -60,6 +60,7 @@ pub async fn update_binance_prices(pool: &PgPool, client: &Client) {
 #[derive(Deserialize)]
 pub struct BybitPrice {
     pub symbol: String,
+    #[serde(rename = "lastPrice")]
     pub last_price: String,
 }
 
@@ -92,7 +93,7 @@ pub async fn fetch_bybit_prices(client: &Client) -> Result<Vec<UnifiedPrice>, re
                 timestamp: chrono::Utc::now().timestamp_millis(),
             }),
             Err(e) => {
-                warn!("Не удалось распарсить цену для {}: {}", p.symbol, e);
+                error!("Не удалось распарсить цену для {}: {}", p.symbol, e);
                 None
             }
         }

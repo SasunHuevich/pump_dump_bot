@@ -181,6 +181,7 @@ pub async fn get_exchanges(pool: &PgPool, user_id: i64) -> Result<EnableExchange
     .await
 }
 
+#[derive(Debug)]
 pub struct UnifiedPrice {
     pub currency: String,
     pub price: f64,
