@@ -45,7 +45,7 @@ CREATE TYPE notification_enum AS ENUM (
 CREATE TABLE user_notifications (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(user_id),
-    currency VARCHAR(15) NOT NULL,
+    currency VARCHAR(50) NOT NULL,
     notification_type notification_enum NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
