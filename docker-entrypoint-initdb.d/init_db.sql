@@ -8,7 +8,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE user_settings (
-    user_id BIGINT PRIMARY KEY REFERENCES users(user_id),
+    user_id BIGINT PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
 
     binance BOOLEAN DEFAULT FALSE,
     bybit BOOLEAN DEFAULT FALSE,
@@ -44,7 +44,7 @@ CREATE TYPE notification_enum AS ENUM (
 
 CREATE TABLE user_notifications (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(user_id),
+    user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     currency VARCHAR(50) NOT NULL,
     notification_type notification_enum NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
@@ -70,7 +70,7 @@ CREATE TYPE user_state AS ENUM (
     );
 
 CREATE TABLE user_states (
-    user_id BIGINT PRIMARY KEY REFERENCES users(user_id),
+    user_id BIGINT PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
     state user_state NOT NULL
 );
 
