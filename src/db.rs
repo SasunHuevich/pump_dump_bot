@@ -333,6 +333,38 @@ pub async fn count_notifications_for_user(
     Ok(count)
 }
 
+pub async fn get_last_user_notification_time(
+    pool: &PgPool,
+    user_id: i64,
+    currency: &str,
+    notif_type: &str
+) -> Result<Option<chrono::NaiveDateTime>, sqlx::Error> {
+    let row = sqlx::query(
+        "
+        SELECT created_at
+        FROM user_notifications
+        WHERE user_id = $1
+          AND currency = $2
+          AND notification_type = $3::notification_enum
+          AND created_at >= NOW() - INTERVAL '24 hours'
+        ORDER BY created_at DESC
+        LIMIT 1
+        "
+    )
+    .bind(user_id)
+    .bind(currency)
+    .bind(notif_type)
+    .fetch_optional(pool)
+    .await?;
+
+    if let Some(rec) = row {
+        let dt: Option<NaiveDateTime> = rec.try_get("created_at")?;
+        Ok(dt)
+    } else {
+        Ok(None)
+    }
+}
+
 pub async fn delete_old_user_notifications(pool: &PgPool) -> Result<(), sqlx::Error> {
     sqlx::query(
         "DELETE FROM user_notifications WHERE created_at < NOW() - INTERVAL '24 hours'"

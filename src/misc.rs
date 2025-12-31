@@ -4,6 +4,7 @@ use log::{info, warn, error};
 use teloxide::prelude::*;
 use std::collections::HashMap;
 use teloxide::types::ChatId;
+use chrono::{Duration};
 
 use crate::db::{UserRole, PriceRow, UserSettings};
 use crate::buttons;
@@ -145,6 +146,30 @@ async fn check_interval_for_user(
             }
         } else {
             if change.change_percent < threshold_percent {
+                continue;
+            }
+        }
+
+        let last_time = match db::get_last_user_notification_time(
+            pool,
+            user.user_id,
+            &change.currency,
+            notification_type
+        ).await {
+            Ok(t) => t,
+            Err(e) => {
+                error!("Ошибка получения времени уведомления: {}", e);
+                None
+            }
+        };
+
+        if let Some(last_dt) = last_time {
+            let now = chrono::Utc::now().naive_utc();
+            let duration: Duration = now - last_dt;
+            let minutes_passed = duration.num_minutes();
+
+            if interval as i64 >= minutes_passed {
+                // интервал захватывает уже отправленное уведомление
                 continue;
             }
         }
