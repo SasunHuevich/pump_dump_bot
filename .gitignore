@@ -1,3 +1,4 @@
 .DS_store
 target
 all_images.tar
+.env

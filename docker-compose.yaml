@@ -26,7 +26,7 @@ services:
       - db
     environment:
       - DATABASE_URL=postgresql://user:pass@db:5432/bot_db
-      - TELOXIDE_TOKEN=5661104344:AAHAGcsZ3XmTaO6DXMuuv8DA-XtbMfUi_Ww
+      - TELOXIDE_TOKEN=${TELOXIDE_TOKEN:?set TELOXIDE_TOKEN in .env}
       - RUST_LOG=info
     logging:
       driver: "json-file"
